@@ -1,4 +1,4 @@
-﻿from flask import Flask, request, jsonify, render_template_string, render_template
+from flask import Flask, request, jsonify, render_template_string, render_template
 from flask_cors import CORS
 import requests
 import re
@@ -79,13 +79,15 @@ class ShopeeAutomationChrome:
             
             logger.info(f"Iniciando Selenium para Shopee: {url}")
             
-            # Criar opções do Chrome
+            # Criar opções do Chrome atualizadas 2025
             options = webdriver.ChromeOptions()
             options.add_argument("--start-maximized")
             options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+            options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--allow-running-insecure-content")
             
             logger.info("Criando driver Chrome...")
             driver = webdriver.Chrome(options=options)
@@ -94,53 +96,162 @@ class ShopeeAutomationChrome:
             driver.get(url)
             
             # Aguardar abertura da página
-            logger.info("Aguardando abertura da página (2 segundos)...")
-            time.sleep(2)
+            logger.info("Aguardando abertura da página (3 segundos)...")
+            time.sleep(3)
             
             # Aguardar carregamento completo
-            logger.info("Aguardando carregamento completo (12 segundos)...")
-            time.sleep(12)
+            logger.info("Aguardando carregamento completo (15 segundos)...")
+            time.sleep(15)
             
-            # Extrair título
-            try:
-                title_elem = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="pdp-product-title"]')
-                title = title_elem.text.strip()
-                if title and len(title) > 5:
-                    result['title'] = title
-                    logger.info(f"Shopee - Título: {title[:60]}...")
-            except Exception as e:
-                logger.debug(f"Título não encontrado: {e}")
+            # Scroll para carregar conteúdo dinâmico
+            logger.info("Fazendo scroll para carregar conteúdo...")
+            driver.execute_script("window.scrollTo(0, 500)")
+            time.sleep(3)
+            driver.execute_script("window.scrollTo(0, 0)")
+            time.sleep(2)
             
-            # Extrair preço
-            try:
-                price_elem = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="pdp-price"]')
-                price_text = price_elem.text.strip()
-                if 'R$' in price_text:
-                    match = re.search(r'R\$\s*(\d+[.,]\d+)', price_text)
+            # Extrair título com múltiplos seletores
+            title_selectors = [
+                'span[data-testid="pdp-product-title"]',
+                'h1[class*="title"]',
+                '.product-briefing__title',
+                'h1',
+                '[class*="title"]'
+            ]
+            
+            for selector in title_selectors:
+                try:
+                    title_elem = driver.find_element(By.CSS_SELECTOR, selector)
+                    title = title_elem.text.strip()
+                    if title and len(title) > 5:
+                        result['title'] = title
+                        logger.info(f"Shopee - Título: {title[:60]}...")
+                        break
+                except Exception:
+                    continue
+            
+            # Extrair preço com múltiplos seletores
+            price_selectors = [
+                'span[data-testid="pdp-price"]',
+                '.current-price',
+                '.product-briefing__price',
+                '[class*="price"]',
+                '.price'
+            ]
+            
+            for selector in price_selectors:
+                try:
+                    price_elem = driver.find_element(By.CSS_SELECTOR, selector)
+                    price_text = price_elem.text.strip()
+                    if 'R$' in price_text or any(c.isdigit() for c in price_text):
+                        # Tentar extrair valor numérico
+                        match = re.search(r'R\$\s*(\d+[.,]\d+)', price_text)
+                        if match:
+                            price_str = match.group(1)
+                            result['price_current'] = float(price_str.replace('.', '').replace(',', '.'))
+                        result['price_current_text'] = price_text
+                        logger.info(f"Shopee - Preço: {price_text}")
+                        break
+                except Exception:
+                    continue
+            
+            # Extrair preço original se existir
+            original_price_selectors = [
+                '.original-price',
+                '.price-before-discount',
+                'del',
+                '.strikethrough'
+            ]
+            
+            for selector in original_price_selectors:
+                try:
+                    orig_elem = driver.find_element(By.CSS_SELECTOR, selector)
+                    orig_text = orig_elem.text.strip()
+                    if 'R$' in orig_text:
+                        match = re.search(r'R\$\s*(\d+[.,]\d+)', orig_text)
+                        if match:
+                            price_str = match.group(1)
+                            result['price_original'] = float(price_str.replace('.', '').replace(',', '.'))
+                        result['price_original_text'] = orig_text
+                        logger.info(f"Shopee - Preço original: {orig_text}")
+                        break
+                except Exception:
+                    continue
+            
+            # Extrair rating com múltiplos seletores
+            rating_selectors = [
+                '[data-testid="pdp-review-summary-rating"]',
+                '.product-briefing__rating',
+                '[class*="rating"]',
+                '.rating'
+            ]
+            
+            for selector in rating_selectors:
+                try:
+                    rating_elem = driver.find_element(By.CSS_SELECTOR, selector)
+                    rating_text = rating_elem.text.strip()
+                    match = re.search(r'(\d+[.,]?\d*)', rating_text)
                     if match:
-                        result['price_current'] = float(match.group(1).replace('.', '').replace(',', '.'))
-                    logger.info(f"Shopee - Preço: {price_text}")
-            except Exception as e:
-                logger.debug(f"Preço não encontrado: {e}")
+                        rating_val = float(match.group(1).replace(',', '.'))
+                        if 0 <= rating_val <= 5:
+                            result['rating'] = rating_val
+                            logger.info(f"Shopee - Rating: {result['rating']}")
+                            break
+                except Exception:
+                    continue
             
-            # Extrair rating
-            try:
-                rating_elem = driver.find_element(By.CSS_SELECTOR, '[data-testid="pdp-review-summary-rating"]')
-                rating_text = rating_elem.text.strip()
-                match = re.search(r'(\d+[.,]?\d*)', rating_text)
-                if match:
-                    result['rating'] = float(match.group(1).replace(',', '.'))
-                    logger.info(f"Shopee - Rating: {result['rating']}")
-            except Exception as e:
-                logger.debug(f"Rating não encontrado: {e}")
+            # Extrair imagem com múltiplos seletores
+            image_selectors = [
+                'img[data-testid="pdp-product-image"]',
+                '.product-briefing__image',
+                'img[class*="image"]',
+                'img[src*="susercontent"]'
+            ]
             
-            # Extrair imagem
-            try:
-                img_elem = driver.find_element(By.CSS_SELECTOR, 'img[data-testid="pdp-product-image"]')
-                result['image_url'] = img_elem.get_attribute('src')
-                logger.info("Shopee - Imagem extraída")
-            except Exception as e:
-                logger.debug(f"Imagem não encontrada: {e}")
+            for selector in image_selectors:
+                try:
+                    img_elem = driver.find_element(By.CSS_SELECTOR, selector)
+                    img_src = img_elem.get_attribute('src')
+                    if img_src and 'http' in img_src:
+                        result['image_url'] = img_src
+                        logger.info("Shopee - Imagem extraída")
+                        break
+                except Exception:
+                    continue
+            
+            # Se não encontrou preço, tentar JavaScript
+            if not result.get('price_current'):
+                logger.info("Tentando extrair preço via JavaScript...")
+                try:
+                    js_script = """
+                    var prices = [];
+                    var elements = document.querySelectorAll('*');
+                    for (var i = 0; i < elements.length; i++) {
+                        var text = elements[i].textContent || '';
+                        if (text.includes('R$') && /R\$\s*[\d,.]+/.test(text)) {
+                            var matches = text.match(/R\$\s*([\d,.]+)/g);
+                            if (matches) {
+                                prices.push(...matches);
+                            }
+                        }
+                    }
+                    return prices;
+                    """
+                    
+                    js_prices = driver.execute_script(js_script)
+                    if js_prices:
+                        for price_text in js_prices:
+                            match = re.search(r'R\$\s*(\d+[.,]\d+)', price_text)
+                            if match:
+                                price_str = match.group(1)
+                                price_val = float(price_str.replace('.', '').replace(',', '.'))
+                                if 1 <= price_val <= 10000:
+                                    result['price_current'] = price_val
+                                    result['price_current_text'] = price_text
+                                    logger.info(f"Shopee - Preço via JavaScript: {price_text}")
+                                    break
+                except Exception as e:
+                    logger.debug(f"Erro no JavaScript: {e}")
             
             result['success'] = bool(result['title'] or result['price_current'])
             logger.info(f"Shopee - Extração: sucesso={result['success']}")
@@ -831,11 +942,14 @@ class ProScraper:
         try:
             logger.info("Iniciando extração detalhada da Amazon")
             
-            # TÍTULO
+            # TÍTULO - Amazon (seletores atualizados 2025)
             title_selectors = [
                 '#productTitle',
                 '.product-title',
                 'h1.a-size-large',
+                'h1.a-size-medium.a-color-base',
+                '#title h1',
+                '.a-spacing-small .a-size-large',
                 'meta[property="og:title"]'
             ]
             
@@ -859,14 +973,15 @@ class ProScraper:
                     logger.debug(f"Erro no seletor de título '{selector}': {e}")
                     continue
             
-            # PREÇO ATUAL - Amazon (usando seletores específicos do HTML fornecido)
+            # PREÇO ATUAL - Amazon (seletores atualizados 2025)
             current_price_selectors = [
-                '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
-                '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-fraction',
-                '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
-                '.a-price-current .a-offscreen',
-                '.a-price .a-offscreen',
                 '.a-price-whole',
+                '.a-price.a-text-price .a-offscreen',
+                '.a-price-current .a-offscreen',
+                '.a-price.aok-align-center .a-price-whole',
+                '.a-price.reinventPricePriceToPayMargin .a-price-whole',
+                '.a-price .a-offscreen',
+                'span.a-price-whole',
                 'meta[property="product:price:amount"]'
             ]
             
@@ -907,13 +1022,14 @@ class ProScraper:
                     logger.debug(f"Erro no seletor de preço atual '{selector}': {e}")
                     continue
             
-            # PREÇO ORIGINAL - Amazon (usando seletores específicos do HTML fornecido)
+            # PREÇO ORIGINAL - Amazon (seletores atualizados 2025)
             original_price_selectors = [
-                '.basisPrice .a-price.a-text-price[data-a-strike="true"] .a-offscreen',  # Preço base "De:" riscado
-                '.a-price.a-text-price[data-a-strike="true"] .a-offscreen',  # Preço riscado específico
-                '.basisPrice .a-price .a-offscreen',   # Preço base "De:"
+                '.a-price.a-text-price[data-a-strike="true"] .a-offscreen',
+                '.a-price-was .a-offscreen',
                 '.a-text-strike .a-offscreen',
-                '.a-price-was .a-offscreen'
+                '.basisPrice .a-price.a-text-price .a-offscreen',
+                '.a-price.a-text-price span.a-offscreen',
+                'span.a-price.a-text-price .a-offscreen'
             ]
             
             for selector in original_price_selectors:
@@ -952,12 +1068,14 @@ class ProScraper:
                     logger.debug(f"Erro no seletor de desconto '{selector}': {e}")
                     continue
             
-            # RATING - Amazon (baseado no HTML fornecido)
+            # RATING - Amazon (seletores atualizados 2025)
             rating_selectors = [
-                '.a-size-small.a-color-base',  # Rating direto como "4,7"
+                '[data-hook="average-star-rating"] .a-size-base',
                 '.a-icon-alt',
                 '.a-star-rating .a-icon-alt',
-                '[data-hook="rating-out-of-text"]'
+                '[data-hook="rating-out-of-text"]',
+                '.a-size-small.a-color-base',
+                '.cr-average-stars-rating'
             ]
             
             for selector in rating_selectors:
@@ -2456,6 +2574,162 @@ class ProScraper:
     def _extract_shopee_from_html(self, soup: BeautifulSoup, url: str) -> Dict:
         """Tenta extrair dados reais do HTML da página do Shopee"""
         data = {}
+        
+        try:
+            logger.info("Shopee - Iniciando extração do HTML")
+            
+            # TÍTULO - Shopee (seletores atualizados 2025)
+            title_selectors = [
+                '.page-product__title',
+                '.product-briefing__title',
+                'h1[class*="title"]',
+                '.product-title',
+                'meta[property="og:title"]',
+                '[data-testid="product-title"]'
+            ]
+            
+            for selector in title_selectors:
+                try:
+                    if selector.startswith('meta'):
+                        elem = soup.find('meta', property='og:title')
+                        if elem and elem.get('content'):
+                            data['title'] = elem.get('content').strip()
+                            logger.info(f"Shopee - Título via meta: {data['title'][:50]}...")
+                            break
+                    else:
+                        elem = soup.select_one(selector)
+                        if elem:
+                            title_text = elem.get_text(strip=True)
+                            if title_text and len(title_text) > 5:
+                                data['title'] = title_text
+                                logger.info(f"Shopee - Título encontrado: {title_text[:50]}...")
+                                break
+                except Exception as e:
+                    logger.debug(f"Erro no seletor de título '{selector}': {e}")
+                    continue
+            
+            # PREÇO ATUAL - Shopee (seletores atualizados 2025)
+            current_price_selectors = [
+                '.page-product__price',
+                '.product-briefing__price',
+                '.current-price',
+                '[class*="price"]',
+                '.price',
+                'meta[property="product:price:amount"]'
+            ]
+            
+            for selector in current_price_selectors:
+                try:
+                    if selector.startswith('meta'):
+                        elem = soup.find('meta', property='product:price:amount')
+                        if elem and elem.get('content'):
+                            price = f"R$ {elem.get('content')}"
+                            data['price_current_text'] = price
+                            logger.info(f"Shopee - Preço atual via meta: {price}")
+                            break
+                    else:
+                        elem = soup.select_one(selector)
+                        if elem:
+                            price_text = elem.get_text(strip=True)
+                            if 'R$' in price_text or any(char.isdigit() for char in price_text):
+                                data['price_current_text'] = price_text
+                                logger.info(f"Shopee - Preço atual: {price_text}")
+                                break
+                except Exception as e:
+                    logger.debug(f"Erro no seletor de preço atual '{selector}': {e}")
+                    continue
+            
+            # PREÇO ORIGINAL - Shopee (seletores atualizados 2025)
+            original_price_selectors = [
+                '.original-price',
+                '.price-before-discount',
+                '[class*="original"]',
+                '.price-strike',
+                'del',
+                '.strikethrough'
+            ]
+            
+            for selector in original_price_selectors:
+                try:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        price_text = elem.get_text(strip=True)
+                        if 'R$' in price_text or any(char.isdigit() for char in price_text):
+                            data['price_original_text'] = price_text
+                            logger.info(f"Shopee - Preço original: {price_text}")
+                            break
+                except Exception as e:
+                    logger.debug(f"Erro no seletor de preço original '{selector}': {e}")
+                    continue
+            
+            # RATING - Shopee (seletores atualizados 2025)
+            rating_selectors = [
+                '.product-briefing__rating',
+                '.product-rating',
+                '[class*="rating"]',
+                '.rating-score',
+                'meta[property="product:rating"]'
+            ]
+            
+            for selector in rating_selectors:
+                try:
+                    if selector.startswith('meta'):
+                        elem = soup.find('meta', property='product:rating')
+                        if elem and elem.get('content'):
+                            rating_value = float(elem.get('content'))
+                            if 0 <= rating_value <= 5:
+                                data['rating'] = rating_value
+                                logger.info(f"Shopee - Rating via meta: {rating_value}")
+                                break
+                    else:
+                        elem = soup.select_one(selector)
+                        if elem:
+                            rating_text = elem.get_text(strip=True)
+                            rating_match = re.search(r'(\d+[,.]?\d*)', rating_text)
+                            if rating_match:
+                                rating_value = float(rating_match.group(1).replace(',', '.'))
+                                if 0 <= rating_value <= 5:
+                                    data['rating'] = rating_value
+                                    logger.info(f"Shopee - Rating: {rating_value}")
+                                    break
+                except Exception as e:
+                    logger.debug(f"Erro no seletor de rating '{selector}': {e}")
+                    continue
+            
+            # IMAGEM - Shopee (seletores atualizados 2025)
+            img_selectors = [
+                '.product-briefing__image',
+                '.product-image',
+                'img[class*="image"]',
+                'meta[property="og:image"]',
+                '[data-testid="product-image"]'
+            ]
+            
+            for selector in img_selectors:
+                try:
+                    if selector.startswith('meta'):
+                        elem = soup.find('meta', property='og:image')
+                        if elem and elem.get('content'):
+                            data['image_url'] = elem.get('content')
+                            logger.info(f"Shopee - Imagem via meta: {data['image_url'][:50]}...")
+                            break
+                    else:
+                        elem = soup.select_one(selector)
+                        if elem:
+                            img_url = elem.get('src') or elem.get('data-src')
+                            if img_url and 'http' in img_url:
+                                data['image_url'] = img_url
+                                logger.info(f"Shopee - Imagem encontrada: {img_url[:50]}...")
+                                break
+                except Exception as e:
+                    logger.debug(f"Erro no seletor de imagem '{selector}': {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Erro geral na extração do HTML do Shopee: {e}")
+        
+        logger.info(f"Shopee HTML - Extração concluída. Campos encontrados: {list(data.keys())}")
+        return data
         
         try:
             # ESTRATÉGIA 1: Procurar por JSON embutido no HTML (dados iniciais do Shopee)
