@@ -268,21 +268,6 @@ class LocalDatabase:
             logger.error(f"Erro ao obter configuração {key}: {e}")
             return default
     
-    def update_setting(self, key: str, value: str):
-        """Atualiza uma configuração"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO settings (key, value, updated_at)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)
-                ''', (key, value))
-                conn.commit()
-                logger.info(f"Configuração atualizada: {key} = {value}")
-                
-        except Exception as e:
-            logger.error(f"Erro ao atualizar configuração {key}: {e}")
-    
     def get_stats(self) -> Dict:
         """Retorna estatísticas do sistema"""
         try:
@@ -331,22 +316,3 @@ class LocalDatabase:
                 'contacts': {'active': 0},
                 'sends': {'last_24h': 0}
             }
-    
-    def cleanup_old_products(self, days: int = 7):
-        """Marca produtos antigos como inativos"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                cutoff_date = datetime.now() - timedelta(days=days)
-                cursor.execute('''
-                    UPDATE products SET active = 0 
-                    WHERE sent_at < ? AND sent_at IS NOT NULL
-                ''', (cutoff_date,))
-                
-                affected = cursor.rowcount
-                conn.commit()
-                logger.info(f"{affected} produtos antigos marcados como inativos")
-                
-        except Exception as e:
-            logger.error(f"Erro ao limpar produtos antigos: {e}")

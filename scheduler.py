@@ -20,14 +20,6 @@ class WhatsAppSender:
         self.instance_name = None
         self.connected = False
         
-    def configure_evolution_api(self, api_url: str, api_key: str, instance_name: str):
-        """Configura a conexão com Evolution API"""
-        self.evolution_api_url = api_url.rstrip('/')
-        self.evolution_api_key = api_key
-        self.instance_name = instance_name
-        self.connected = True
-        logger.info(f"Evolution API configurada: {api_url}")
-    
     def load_evolution_config(self):
         """Carrega configurações da Evolution API do banco de dados"""
         try:
@@ -36,7 +28,11 @@ class WhatsAppSender:
             instance_name = self.db.get_setting('evolution_instance_name')
             
             if all([api_url, api_key, instance_name]):
-                self.configure_evolution_api(api_url, api_key, instance_name)
+                self.evolution_api_url = api_url.rstrip('/')
+                self.evolution_api_key = api_key
+                self.instance_name = instance_name
+                self.group_id = self.db.get_setting('evolution_group_id')
+                self.connected = True
                 logger.info("Configurações da Evolution API carregadas do banco")
                 return True
             else:
