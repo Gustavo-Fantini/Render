@@ -297,6 +297,7 @@ def send_product_now(product_id):
             # Enviar mensagem via Evolution API
             from scheduler import WhatsAppSender
             sender = WhatsAppSender(db)
+            sender.load_evolution_config()  # Carregar configurações
             
             # Converter Row para dicionário
             product_dict = dict(product)
@@ -382,6 +383,43 @@ def delete_product(product_id):
                 
     except Exception as e:
         logger.error(f"Erro ao excluir produto {product_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/status', methods=['GET'])
+def get_sender_status():
+    """Retorna status do sistema de envios"""
+    try:
+        # Verificar configurações da Evolution API
+        api_url = db.get_setting('evolution_api_url')
+        api_key = db.get_setting('evolution_api_key')
+        instance_name = db.get_setting('evolution_instance_name')
+        group_id = db.get_setting('evolution_group_id')
+        
+        # Criar sender e carregar configurações
+        from scheduler import WhatsAppSender
+        sender = WhatsAppSender(db)
+        sender.load_evolution_config()
+        
+        # Testar conexão
+        connected = sender.test_connection() if sender.connected else False
+        
+        return jsonify({
+            'success': True,
+            'status': {
+                'configured': bool(api_url and api_key and instance_name),
+                'connected': connected,
+                'group_configured': bool(group_id),
+                'api_url': api_url,
+                'instance_name': instance_name,
+                'group_id': group_id
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

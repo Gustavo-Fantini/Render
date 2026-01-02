@@ -18,6 +18,7 @@ class WhatsAppSender:
         self.evolution_api_url = None
         self.evolution_api_key = None
         self.instance_name = None
+        self.group_id = None
         self.connected = False
         
     def load_evolution_config(self):
