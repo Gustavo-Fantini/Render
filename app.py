@@ -189,10 +189,16 @@ def configure_whatsapp():
                 'error': 'Todos os campos são obrigatórios: api_url, api_key, instance_name'
             }), 400
         
+        # Salvar no banco de dados
+        db.update_setting('evolution_api_url', api_url)
+        db.update_setting('evolution_api_key', api_key)
+        db.update_setting('evolution_instance_name', instance_name)
+        
+        # Configurar no scheduler
         success = scheduler.configure_whatsapp(api_url, api_key, instance_name)
         
         if success:
-            logger.info("WhatsApp configurado via API")
+            logger.info("WhatsApp configurado via API e salvo no banco")
             return jsonify({
                 'success': True,
                 'message': 'WhatsApp configurado com sucesso'

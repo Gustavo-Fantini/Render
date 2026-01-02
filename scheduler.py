@@ -27,6 +27,25 @@ class WhatsAppSender:
         self.instance_name = instance_name
         self.connected = True
         logger.info(f"Evolution API configurada: {api_url}")
+    
+    def load_evolution_config(self):
+        """Carrega configurações da Evolution API do banco de dados"""
+        try:
+            api_url = self.db.get_setting('evolution_api_url')
+            api_key = self.db.get_setting('evolution_api_key')
+            instance_name = self.db.get_setting('evolution_instance_name')
+            
+            if all([api_url, api_key, instance_name]):
+                self.configure_evolution_api(api_url, api_key, instance_name)
+                logger.info("Configurações da Evolution API carregadas do banco")
+                return True
+            else:
+                logger.warning("Configurações da Evolution API não encontradas no banco")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Erro ao carregar configurações da Evolution API: {e}")
+            return False
         
     def test_connection(self) -> bool:
         """Testa conexão com Evolution API"""
@@ -115,6 +134,9 @@ class ScheduledSender:
         self.db = db
         self.whatsapp_sender = WhatsAppSender(db)
         self.running = False
+        
+        # Carregar configurações da Evolution API do banco
+        self.whatsapp_sender.load_evolution_config()
         self.scheduler_thread = None
         
     def start_scheduler(self):
