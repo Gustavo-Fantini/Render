@@ -590,27 +590,8 @@
 
         <!-- CONFIGURAÇÕES -->
         <div id="configurations">
-          <div class="form-group">
-            <label>Categoria</label>
-            <select id="category">
-              <option value="tecnologia">💻 Tecnologia</option>
-              <option value="casa">🏠 Casa</option>
-              <option value="saude">💪 Saúde</option>
-              <option value="moda">👗 Moda</option>
-              <option value="esporte">⚽ Esporte</option>
-            </select>
-          </div>
+                    
           
-          <div class="form-group">
-            <label>Tipo de Mensagem</label>
-            <select id="messageType">
-              <option value="impacto">🔥 Alto Impacto</option>
-              <option value="urgencia">⏰ Urgência</option>
-              <option value="beneficio">✨ Benefícios</option>
-              <option value="escassez">🚨 Escassez</option>
-            </select>
-          </div>
-
           <div class="form-group">
             <label>Configurações de Frete</label>
             <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
@@ -651,14 +632,7 @@
           </div>
 
           <div class="form-group">
-            <label>Outras Configurações</label>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
-              <span style="font-size: 0.9rem;">Incluir avaliações</span>
-              <div class="toggle-switch" id="toggleRatings">
-                <div class="toggle-slider"></div>
-              </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
               <span style="font-size: 0.9rem;">Salvar no Supabase</span>
               <div class="toggle-switch active" id="toggleSupabase">
                 <div class="toggle-slider"></div>
@@ -1037,97 +1011,36 @@
       container.style.display = 'block';
       messagesList.innerHTML = '';
 
-      const category = document.getElementById('category').value;
-      const messageType = document.getElementById('messageType').value;
-      
-      const messages = createMessages(currentProduct, category, messageType);
-
-      messages.forEach((message, index) => {
-        const messageDiv = createMessageElement(message, index);
-        messagesList.appendChild(messageDiv);
-      });
+      // Criar mensagem padrão única
+      const message = createStandardMessage(currentProduct);
+      const messageDiv = createMessageElement(message, 0);
+      messagesList.appendChild(messageDiv);
     }
 
-    // CRIAR MENSAGENS
-    function createMessages(product, category, messageType) {
+    // CRIAR MENSAGEM PADRÃO
+    function createStandardMessage(product) {
       const title = product.fields.title?.value || 'Produto';
-      const priceOriginal = product.fields.price_original?.value;
-      const priceCurrent = product.fields.price_current?.value;
-      const discount = product.fields.discount_percentage?.value;
+      const price = product.fields.price_current?.value || 'Preço não disponível';
       const url = product.url;
-      const rating = product.fields.rating?.value;
-      const ratingCount = product.fields.rating?.count;
 
-      // Configurações de frete
-      const includeFrete = document.getElementById('toggleFrete').classList.contains('active');
-      const freteMinimo = document.getElementById('freteMinimo').value;
-      const freteCondicao = document.getElementById('freteCondicao').value;
-      
-      // Configurações de cupom
-      const includeCupom = document.getElementById('toggleCupom').classList.contains('active');
-      const cupomCodigo = document.getElementById('cupomCodigo').value || 'PROMO10';
-      const cupomValor = document.getElementById('cupomValor').value || '10';
-      const cupomTipo = document.getElementById('cupomTipo').value;
+      // Buscar configurações do banco local (se disponíveis)
+      const sellerText = 'Vendido e entregue por Amazon'; // Padrão
+      const groupLink = 'https://linktr.ee/Free_Island'; // Padrão
 
-      // Configurações de avaliação
-      const includeRatings = document.getElementById('toggleRatings').classList.contains('active');
+      const message = `➡️ ${title}
+${sellerText}
 
-      // Texto de frete
-      let freteTexto = '';
-      if (includeFrete) {
-        switch(freteCondicao) {
-          case 'geral':
-            freteTexto = '\\n🚚 FRETE GRÁTIS';
-            break;
-          case 'minimo':
-            freteTexto = `\\n🚚 FRETE GRÁTIS acima de ${freteMinimo || 'R$ 79,90'}`;
-            break;
-          case 'prime':
-            freteTexto = '\\n🚚 FRETE GRÁTIS com Prime/Full';
-            break;
-          case 'regiao':
-            freteTexto = '\\n🚚 FRETE GRÁTIS para sua região';
-            break;
-        }
-      }
+✅ Por ${price}
+🛒 ${url}
 
-      // Texto de cupom
-      let cupomTexto = '';
-      if (includeCupom && cupomCodigo) {
-        const simbolo = cupomTipo === 'porcentagem' ? '%' : 'R';
-        cupomTexto = `\\n🎟️ USE O CUPOM: ${cupomCodigo.toUpperCase()} (${simbolo}${cupomValor} OFF)`;
-      }
+☑️ Link do grupo: ${groupLink}`;
 
-      // Texto de avaliação
-      let avaliacaoTexto = '';
-      if (includeRatings && rating) {
-        avaliacaoTexto = `\\n⭐ ${rating}/5 (${ratingCount || '0'} avaliações)`;
-      }
-
-      const emojis = {
-        tecnologia: '💻', casa: '🏠', saude: '💪', moda: '👗', esporte: '⚽'
+      return {
+        title: 'Mensagem Padrão',
+        message: message,
+        category: 'padrao',
+        type: 'promocao'
       };
-
-      const templates = {
-        impacto: [
-          `🔥 OFERTA IMPERDÍVEL! ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${priceOriginal ? `💸 De ${priceOriginal} por ${priceCurrent}` : `💰 Por apenas ${priceCurrent}`}${discount ? ` (${discount} OFF)` : ''}${freteTexto}${cupomTexto}\\n🚀 Garanta já o seu!\\n🔗 ${url}\\n\\n📱 Grupo VIP: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`,
-          `⚡ SUPER PROMOÇÃO ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${discount ? `🎯 ${discount} DE DESCONTO!` : '🎯 PREÇO ESPECIAL!'}\\n💰 Apenas ${priceCurrent}${freteTexto}${cupomTexto}\\n✨ Oferta por tempo limitado\\n🔗 ${url}\\n\\n📱 Mais ofertas: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`
-        ],
-        urgencia: [
-          `⏰ ÚLTIMAS HORAS! ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${priceOriginal ? `❌ ${priceOriginal}` : ''}\\n✅ ${priceCurrent}${discount ? ` (-${discount})` : ''}${freteTexto}${cupomTexto}\\n🏃‍♂️ Corre que ainda dá tempo!\\n🔗 ${url}\\n\\n📱 Grupo exclusivo: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`,
-          `🚨 ATENÇÃO! Oferta relâmpago ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${discount ? `💥 ${discount} OFF SOMENTE HOJE!` : '💥 PROMOÇÃO ESPECIAL!'}\\n💵 ${priceCurrent}${freteTexto}${cupomTexto}\\n⚡ Estoque limitado!\\n🔗 ${url}\\n\\n📱 Não perca: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`
-        ],
-        beneficio: [
-          `✨ ${title} ${emojis[category]}${avaliacaoTexto}\\n💰 ${priceOriginal && priceCurrent ? `Economia de ${priceOriginal} para ${priceCurrent}` : priceCurrent}${freteTexto}${cupomTexto}\\n✅ Qualidade garantida\\n✅ Entrega rápida\\n✅ Compra segura\\n🔗 ${url}\\n\\n📱 Ofertas diárias: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`,
-          `🎁 Presenteie com economia! ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${discount ? `🏷️ ${discount} de desconto` : '🏷️ Oferta especial'}\\n💳 ${priceCurrent} (parcele sem juros!)${freteTexto}${cupomTexto}\\n🚚 Entrega garantida\\n🔗 ${url}\\n\\n📱 Grupo VIP: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`
-        ],
-        escassez: [
-          `🚨 ÚLTIMAS UNIDADES! ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${priceOriginal && discount ? `🔥 ${discount} OFF - De ${priceOriginal} por ${priceCurrent}` : `💰 ${priceCurrent}`}${freteTexto}${cupomTexto}\\n⚠️ Quase esgotado!\\n🛒 Compre antes que acabe\\n🔗 ${url}\\n\\n📱 Fique por dentro: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`,
-          `🔴 ESTOQUE LIMITADO! ${emojis[category]}\\n${title}${avaliacaoTexto}\\n${discount ? `💣 DESCONTO DE ${discount}` : '💣 OFERTA EXCLUSIVA'}\\n💵 Apenas ${priceCurrent}${freteTexto}${cupomTexto}\\n📦 Poucas unidades restantes\\n🔗 ${url}\\n\\n📱 Grupo de ofertas: https://chat.whatsapp.com/JelwkQXy1Mj05NWybBCTQX`
-        ]
-      };
-
-      return templates[messageType] || templates.impacto;
     }
 
     // CRIAR ELEMENTO DE MENSAGEM
@@ -1314,15 +1227,6 @@
       status.textContent = icon;
     });
 
-    // EVENT LISTENERS PARA REGENERAR MENSAGENS
-    document.getElementById('category').addEventListener('change', () => {
-      if (currentProduct) generateMessages();
-    });
-    
-    document.getElementById('messageType').addEventListener('change', () => {
-      if (currentProduct) generateMessages();
-    });
-
     // EVENT LISTENERS PARA TOGGLES
     document.querySelectorAll('.toggle-switch').forEach(toggle => {
       toggle.addEventListener('click', function() {
@@ -1335,31 +1239,7 @@
           document.getElementById('cupomConfig').style.display = 
             this.classList.contains('active') ? 'block' : 'none';
         }
-        
-        // Regenerar mensagens se necessário
-        if (currentProduct) generateMessages();
       });
-    });
-
-    // EVENT LISTENERS PARA CONFIGURAÇÕES DE FRETE E CUPOM
-    document.getElementById('freteMinimo').addEventListener('input', () => {
-      if (currentProduct) generateMessages();
-    });
-    
-    document.getElementById('freteCondicao').addEventListener('change', () => {
-      if (currentProduct) generateMessages();
-    });
-    
-    document.getElementById('cupomCodigo').addEventListener('input', () => {
-      if (currentProduct) generateMessages();
-    });
-    
-    document.getElementById('cupomValor').addEventListener('input', () => {
-      if (currentProduct) generateMessages();
-    });
-    
-    document.getElementById('cupomTipo').addEventListener('change', () => {
-      if (currentProduct) generateMessages();
     });
 
     // INICIALIZAÇÃO
