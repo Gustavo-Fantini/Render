@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ProScraper Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="max-w-md mx-auto">
+            <!-- Logo e Título -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white mb-2">ProScraper Pro</h1>
+                <p class="text-gray-200">Sistema de Envios Automáticos</p>
+            </div>
+
+            <!-- Formulário de Login -->
+            <div class="glass-effect rounded-xl p-8 shadow-2xl">
+                <form id="loginForm" class="space-y-6">
+                    <!-- Campo de Usuário -->
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-200 mb-2">
+                            Usuário
+                        </label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            required
+                            class="w-full px-4 py-3 bg-white bg-opacity-20 border border-gray-300 border-opacity-30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Digite seu usuário"
+                            value="gustavofantini"
+                        >
+                    </div>
+
+                    <!-- Campo de Senha -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-200 mb-2">
+                            Senha
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            class="w-full px-4 py-3 bg-white bg-opacity-20 border border-gray-300 border-opacity-30 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Digite sua senha"
+                        >
+                    </div>
+
+                    <!-- Botão de Login -->
+                    <div>
+                        <button
+                            type="submit"
+                            id="loginBtn"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+                        >
+                            <span id="btnText">Entrar</span>
+                            <span id="btnLoading" class="hidden">
+                                <svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Autenticando...
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Mensagem de Erro -->
+                    <div id="errorMessage" class="hidden bg-red-500 bg-opacity-20 border border-red-500 border-opacity-30 text-red-200 px-4 py-3 rounded-lg">
+                        <span id="errorText"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Informações -->
+            <div class="text-center mt-8">
+                <p class="text-gray-300 text-sm">
+                    Acesso restrito ao sistema
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('btnText');
+            const btnLoading = document.getElementById('btnLoading');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            // Esconder mensagem de erro
+            errorMessage.classList.add('hidden');
+            
+            // Mostrar loading
+            loginBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Login bem-sucedido - redirecionar
+                    window.location.href = '/';
+                } else {
+                    // Mostrar erro
+                    errorText.textContent = data.error || 'Erro ao fazer login';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorText.textContent = 'Erro de conexão com o servidor';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                // Restaurar botão
+                loginBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        });
+
+        // Limpar erro ao digitar
+        document.getElementById('username').addEventListener('input', function() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        });
+        
+        document.getElementById('password').addEventListener('input', function() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

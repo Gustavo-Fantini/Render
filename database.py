@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import hashlib
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
@@ -18,6 +19,16 @@ class LocalDatabase:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+                
+                # Tabela de usuários
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
                 
                 # Tabela de produtos
                 cursor.execute('''
@@ -103,6 +114,9 @@ class LocalDatabase:
                 cursor.execute('''
                     INSERT OR IGNORE INTO contacts (name, phone_number) VALUES (?, ?)
                 ''', ('Contato Teste', '5511999999999'))
+                
+                # Criar usuário padrão
+                self.init_default_user()
                 
                 conn.commit()
                 logger.info("Banco de dados local inicializado com sucesso")
@@ -331,3 +345,59 @@ class LocalDatabase:
                 'contacts': {'active': 0},
                 'sends': {'last_24h': 0}
             }
+    
+    def create_user(self, username: str, password: str) -> bool:
+        """Cria um novo usuário"""
+        try:
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO users (username, password_hash)
+                    VALUES (?, ?)
+                ''', (username, password_hash))
+                conn.commit()
+                logger.info(f"Usuário criado: {username}")
+                return True
+                
+        except sqlite3.IntegrityError:
+            logger.warning(f"Usuário {username} já existe")
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao criar usuário: {e}")
+            return False
+    
+    def verify_user(self, username: str, password: str) -> bool:
+        """Verifica credenciais do usuário"""
+        try:
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT id FROM users 
+                    WHERE username = ? AND password_hash = ?
+                ''', (username, password_hash))
+                
+                result = cursor.fetchone()
+                return result is not None
+                
+        except Exception as e:
+            logger.error(f"Erro ao verificar usuário: {e}")
+            return False
+    
+    def init_default_user(self):
+        """Cria usuário padrão se não existir"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(*) FROM users')
+                user_count = cursor.fetchone()[0]
+                
+                if user_count == 0:
+                    self.create_user('gustavofantini', 'Gustavinho12')
+                    logger.info("Usuário padrão criado: gustavofantini")
+                    
+        except Exception as e:
+            logger.error(f"Erro ao inicializar usuário padrão: {e}")

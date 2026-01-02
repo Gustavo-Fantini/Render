@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 import logging
 import sqlite3
@@ -6,6 +6,7 @@ from datetime import datetime
 from database import LocalDatabase
 from simple_scraper import SimpleScraper
 from scheduler import ScheduledSender
+import functools
 
 # Configuração de logging
 logging.basicConfig(
@@ -20,6 +21,16 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+app.secret_key = 'proscraper-secret-key-2024'  # Chave para sessões
+
+# Decorator para verificar login
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Inicializar banco de dados, scheduler e scraper
 db = LocalDatabase()
@@ -36,7 +47,68 @@ except Exception as e:
 # Inicializar sistema
 logger.info("Sistema inicializado com banco de dados local")
 
+@app.route('/login')
+def login_page():
+    """Página de login"""
+    return render_template('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """API de login"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return jsonify({
+                'success': False,
+                'error': 'Usuário e senha são obrigatórios'
+            }), 400
+        
+        # Verificar credenciais
+        if db.verify_user(username, password):
+            session['user_id'] = username
+            session.permanent = True  # Manter sessão ativa
+            logger.info(f"Login bem-sucedido: {username}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Login realizado com sucesso'
+            })
+        else:
+            logger.warning(f"Tentativa de login falhou: {username}")
+            return jsonify({
+                'success': False,
+                'error': 'Usuário ou senha incorretos'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"Erro no login: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Erro interno do servidor'
+        }), 500
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """API de logout"""
+    try:
+        session.clear()
+        logger.info("Logout realizado")
+        return jsonify({
+            'success': True,
+            'message': 'Logout realizado com sucesso'
+        })
+    except Exception as e:
+        logger.error(f"Erro no logout: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Erro ao fazer logout'
+        }), 500
+
 @app.route('/')
+@login_required
 def index():
     """Página principal"""
     try:
@@ -65,6 +137,7 @@ def index():
         """
 
 @app.route('/sender')
+@login_required
 def sender_page():
     """Página de gerenciamento simplificada do sistema de envios"""
     return render_template('sender_simple.html')
