@@ -72,6 +72,16 @@ class LocalDatabase:
                     )
                 ''')
                 
+                # Migração: Adicionar coluna message se não existir
+                try:
+                    cursor.execute('ALTER TABLE products ADD COLUMN message TEXT')
+                    logger.info("Coluna 'message' adicionada à tabela products")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" in str(e).lower():
+                        logger.info("Coluna 'message' já existe na tabela products")
+                    else:
+                        raise e
+                
                 # Índices para performance
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_products_sent_at ON products(sent_at)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_products_active ON products(active)')
