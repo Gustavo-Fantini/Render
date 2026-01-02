@@ -126,6 +126,8 @@ class SimpleScraper:
         """Extrai dados da Amazon (simplificado)"""
         data = {'url': url}
         
+        logger.info("Iniciando scraping Amazon...")
+        
         # Título
         title_selectors = [
             '#productTitle',  # ID exato do HTML
@@ -142,6 +144,7 @@ class SimpleScraper:
                     elem = soup.find('meta', property='og:title')
                     if elem and elem.get('content'):
                         data['title'] = elem.get('content').strip()
+                        logger.info(f"Título encontrado via meta: {data['title']}")
                         break
                 else:
                     elem = soup.select_one(selector)
@@ -149,31 +152,20 @@ class SimpleScraper:
                         title = elem.get_text(strip=True)
                         if title and len(title) > 5:
                             data['title'] = title
+                            logger.info(f"Título encontrado via {selector}: {title}")
                             break
             except Exception as e:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço (priorizar preço com desconto) - baseado no HTML exato
+        # Preço - abordagem mais simples
         price_selectors = [
-            # Estrutura exata do HTML fornecido
-            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
-            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-fraction',
-            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-decimal',
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
-            # Alternativas baseadas no HTML
-            '.a-price.a-size-medium.a-color-price',
-            '.a-price.a-text-price.a-size-medium.apexPriceToPay',
-            '.a-price-current .a-offscreen',
-            '.a-price .a-offscreen',
             '.a-price-current',
+            '.a-price .a-offscreen',
             '.a-price-whole',
-            '.a-price .a-price-whole',
             '.a-price-fraction',
-            '.a-price .a-price-fraction',
-            'span.a-price.a-text-price.a-size-medium.apexPriceToPay',
-            'span.a-price.a-text-price',
-            'span[data-a-color="price"]',
+            'span.a-price-whole',
             'meta[property="product:price:amount"]'
         ]
         
@@ -187,49 +179,20 @@ class SimpleScraper:
                         if formatted:
                             data['price_current_text'] = formatted
                             data['price_current'] = price_val
+                            logger.info(f"Preço encontrado via meta: {price_text}")
                             break
                 else:
                     elem = soup.select_one(selector)
                     if elem:
-                        # Para Amazon: combinar partes inteiras e fracionadas se necessário
-                        if 'a-price-whole' in selector or 'a-price-fraction' in selector or 'a-price-decimal' in selector:
-                            # Tentar encontrar o container completo do preço
-                            price_container = elem.find_parent(class_='a-price')
-                            if price_container:
-                                whole = price_container.select_one('.a-price-whole')
-                                fraction = price_container.select_one('.a-price-fraction')
-                                decimal = price_container.select_one('.a-price-decimal')
-                                
-                                if whole and fraction:
-                                    # Combinar partes: R$ 42 + ,75 = R$ 42,75
-                                    whole_text = whole.get_text(strip=True).replace('R$', '').strip()
-                                    fraction_text = fraction.get_text(strip=True)
-                                    price_text = f"R$ {whole_text},{fraction_text}"
-                                    
-                                    formatted, price_val = self._clean_price(price_text)
-                                    if formatted:
-                                        data['price_current_text'] = formatted
-                                        data['price_current'] = price_val
-                                        logger.info(f"Preço combinado Amazon: {price_text}")
-                                        break
-                                elif whole:
-                                    # Apenas parte inteira disponível
-                                    whole_text = whole.get_text(strip=True).replace('R$', '').strip()
-                                    price_text = f"R$ {whole_text}"
-                                    
-                                    formatted, price_val = self._clean_price(price_text)
-                                    if formatted:
-                                        data['price_current_text'] = formatted
-                                        data['price_current'] = price_val
-                                        logger.info(f"Preço parcial Amazon: {price_text}")
-                                        break
-                        
                         price_text = elem.get_text(strip=True)
+                        logger.info(f"Elemento de preço encontrado via {selector}: '{price_text}'")
+                        
                         if 'R$' in price_text or any(c.isdigit() for c in price_text):
                             formatted, price_val = self._clean_price(price_text)
                             if formatted:
                                 data['price_current_text'] = formatted
                                 data['price_current'] = price_val
+                                logger.info(f"Preço processado: {price_text} -> {formatted}")
                                 break
             except Exception as e:
                 logger.debug(f"Erro no seletor de preço '{selector}': {e}")
@@ -253,6 +216,7 @@ class SimpleScraper:
                     elem = soup.find('meta', property='og:image')
                     if elem and elem.get('content'):
                         data['image_url'] = elem.get('content')
+                        logger.info(f"Imagem encontrada via meta: {data['image_url']}")
                         break
                 else:
                     elem = soup.select_one(selector)
@@ -260,10 +224,23 @@ class SimpleScraper:
                         img_src = elem.get('src') or elem.get('data-src')
                         if img_src and 'http' in img_src:
                             data['image_url'] = img_src
+                            logger.info(f"Imagem encontrada via {selector}: {img_src}")
                             break
             except Exception as e:
                 logger.debug(f"Erro no seletor de imagem '{selector}': {e}")
                 continue
+        
+        # Log do resultado
+        title_found = bool(data.get('title'))
+        price_found = bool(data.get('price_current'))
+        image_found = bool(data.get('image_url'))
+        
+        logger.info(f"Scraping Amazon - Título: {title_found}, Preço: {price_found}, Imagem: {image_found}")
+        
+        if title_found and price_found:
+            logger.info("Scraping Amazon bem-sucedido!")
+        else:
+            logger.warning("Scraping Amazon parcial ou falhou")
         
         return data
     
