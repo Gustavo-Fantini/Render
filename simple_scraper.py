@@ -128,11 +128,11 @@ class SimpleScraper:
         
         # Título
         title_selectors = [
-            '#productTitle',
+            '#productTitle',  # ID exato do HTML
+            '.a-size-large.product-title-word-break',  # Classe exata
+            'h1.a-size-large',  # h1 com classe
+            'h1[data-asin]',  # h1 com atributo
             '.product-title',
-            'h1.a-size-large',
-            'h1[data-asin]',
-            '.a-size-large.product-title-word-break',
             'meta[property="og:title"]'
         ]
         
@@ -154,18 +154,19 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço (priorizar preço com desconto)
+        # Preço (priorizar preço com desconto) - baseado no HTML exato
         price_selectors = [
-            # Preço com desconto (prioridade) - baseado no HTML real
+            # Estrutura exata do HTML fornecido
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
-            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-fraction',
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-decimal',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            # Alternativas baseadas no HTML
+            '.a-price.a-size-medium.a-color-price',
+            '.a-price.a-text-price.a-size-medium.apexPriceToPay',
             '.a-price-current .a-offscreen',
             '.a-price .a-offscreen',
             '.a-price-current',
-            '.a-price.a-size-medium.a-color-price',
-            '.a-price.a-text-price.a-size-medium.apexPriceToPay',
             '.a-price-whole',
             '.a-price .a-price-whole',
             '.a-price-fraction',
@@ -191,18 +192,36 @@ class SimpleScraper:
                     elem = soup.select_one(selector)
                     if elem:
                         # Para Amazon: combinar partes inteiras e fracionadas se necessário
-                        if 'a-price-whole' in selector or 'a-price-fraction' in selector:
+                        if 'a-price-whole' in selector or 'a-price-fraction' in selector or 'a-price-decimal' in selector:
                             # Tentar encontrar o container completo do preço
                             price_container = elem.find_parent(class_='a-price')
                             if price_container:
                                 whole = price_container.select_one('.a-price-whole')
                                 fraction = price_container.select_one('.a-price-fraction')
+                                decimal = price_container.select_one('.a-price-decimal')
+                                
                                 if whole and fraction:
-                                    price_text = f"R$ {whole.get_text(strip=True)},{fraction.get_text(strip=True)}"
+                                    # Combinar partes: R$ 42 + ,75 = R$ 42,75
+                                    whole_text = whole.get_text(strip=True).replace('R$', '').strip()
+                                    fraction_text = fraction.get_text(strip=True)
+                                    price_text = f"R$ {whole_text},{fraction_text}"
+                                    
                                     formatted, price_val = self._clean_price(price_text)
                                     if formatted:
                                         data['price_current_text'] = formatted
                                         data['price_current'] = price_val
+                                        logger.info(f"Preço combinado Amazon: {price_text}")
+                                        break
+                                elif whole:
+                                    # Apenas parte inteira disponível
+                                    whole_text = whole.get_text(strip=True).replace('R$', '').strip()
+                                    price_text = f"R$ {whole_text}"
+                                    
+                                    formatted, price_val = self._clean_price(price_text)
+                                    if formatted:
+                                        data['price_current_text'] = formatted
+                                        data['price_current'] = price_val
+                                        logger.info(f"Preço parcial Amazon: {price_text}")
                                         break
                         
                         price_text = elem.get_text(strip=True)
