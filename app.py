@@ -535,6 +535,80 @@ def update_product(product_id):
             'error': str(e)
         }), 500
 
+@app.route('/api/products/<int:product_id>/send', methods=['POST'])
+def send_product_now(product_id):
+    """Envia um produto imediatamente"""
+    try:
+        with sqlite3.connect('proscraper.db') as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Buscar produto
+            cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+            product = cursor.fetchone()
+            
+            if not product:
+                return jsonify({
+                    'success': False,
+                    'error': 'Produto não encontrado'
+                }), 404
+            
+            # Enviar mensagem via Evolution API
+            from scheduler import WhatsAppSender
+            sender = WhatsAppSender(db)
+            
+            message = product['message']
+            group_id = sender.get_group_id()
+            
+            if not group_id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Grupo não configurado'
+                }), 400
+            
+            success = sender.send_message(group_id, message)
+            
+            if success:
+                # Registrar log de envio
+                cursor.execute('''
+                    INSERT INTO send_logs (product_id, sent_at, success, error_message)
+                    VALUES (?, CURRENT_TIMESTAMP, ?, ?)
+                ''', (product_id, True, None))
+                
+                # Atualizar contador de envios
+                cursor.execute('''
+                    UPDATE products SET sent_count = sent_count + 1, last_sent = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (product_id,))
+                
+                conn.commit()
+                logger.info(f"Produto {product_id} enviado imediatamente com sucesso")
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Produto enviado com sucesso'
+                })
+            else:
+                # Registrar falha
+                cursor.execute('''
+                    INSERT INTO send_logs (product_id, sent_at, success, error_message)
+                    VALUES (?, CURRENT_TIMESTAMP, ?, ?)
+                ''', (product_id, False, 'Falha no envio'))
+                
+                conn.commit()
+                
+                return jsonify({
+                    'success': False,
+                    'error': 'Falha ao enviar mensagem'
+                }), 500
+                
+    except Exception as e:
+        logger.error(f"Erro ao enviar produto {product_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/products/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     """Exclui um produto"""
@@ -579,6 +653,143 @@ def health_check():
     })
 
 # ==================== INICIALIZAÇÃO ====================
+
+@app.route('/api/scheduler/interval', methods=['GET'])
+def get_scheduler_interval():
+    """Retorna o intervalo atual do agendamento"""
+    try:
+        with sqlite3.connect('proscraper.db') as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT value FROM settings WHERE key = "scheduler_interval"')
+            result = cursor.fetchone()
+            
+            interval = int(result['value']) if result else 15
+            
+            return jsonify({
+                'success': True,
+                'interval': interval
+            })
+            
+    except Exception as e:
+        logger.error(f"Erro ao buscar intervalo: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/scheduler/interval', methods=['POST'])
+def update_scheduler_interval():
+    """Atualiza o intervalo do agendamento"""
+    try:
+        data = request.get_json()
+        interval = data.get('interval', 15)
+        
+        # Validar intervalo (mínimo 5 minutos)
+        if interval < 5:
+            return jsonify({
+                'success': False,
+                'error': 'Intervalo mínimo é 5 minutos'
+            }), 400
+        
+        with sqlite3.connect('proscraper.db') as conn:
+            cursor = conn.cursor()
+            
+            # Atualizar ou inserir configuração
+            cursor.execute('''
+                INSERT OR REPLACE INTO settings (key, value, updated_at)
+                VALUES ('scheduler_interval', ?, CURRENT_TIMESTAMP)
+            ''', (interval,))
+            
+            conn.commit()
+            
+            # Atualizar scheduler em execução
+            if scheduler and scheduler.running:
+                scheduler.stop_scheduler()
+                scheduler.interval = interval * 60  # Converter para segundos
+                scheduler.start_scheduler()
+                logger.info(f"Scheduler atualizado para {interval} minutos")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Intervalo atualizado para {interval} minutos',
+                'interval': interval
+            })
+            
+    except Exception as e:
+        logger.error(f"Erro ao atualizar intervalo: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/scheduler/status', methods=['GET'])
+def get_scheduler_status():
+    """Retorna o status atual do agendamento"""
+    try:
+        return jsonify({
+            'success': True,
+            'running': scheduler.running if scheduler else False,
+            'interval': scheduler.interval // 60 if scheduler else 15
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/scheduler/start', methods=['POST'])
+def start_scheduler():
+    """Inicia o agendamento"""
+    try:
+        if scheduler and not scheduler.running:
+            scheduler.start_scheduler()
+            logger.info("Scheduler iniciado manualmente")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Scheduler iniciado com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Scheduler já está em execução'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Erro ao iniciar scheduler: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/scheduler/stop', methods=['POST'])
+def stop_scheduler():
+    """Para o agendamento"""
+    try:
+        if scheduler and scheduler.running:
+            scheduler.stop_scheduler()
+            logger.info("Scheduler parado manualmente")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Scheduler parado com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Scheduler não está em execução'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Erro ao parar scheduler: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     logger.info("Iniciando ProScraper Pro com banco local")
