@@ -55,8 +55,11 @@ class WhatsAppSender:
                 'Content-Type': 'application/json'
             }
             
+            endpoint = f"{self.evolution_api_url}/instance/{self.instance_name}"
+            logger.info(f"Testando conexão com: {endpoint}")
+            
             response = requests.get(
-                f"{self.evolution_api_url}/instance/{self.instance_name}",
+                endpoint,
                 headers=headers,
                 timeout=10
             )
@@ -68,6 +71,13 @@ class WhatsAppSender:
                 logger.error(f"Erro na conexão: {response.status_code}")
                 return False
                 
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Erro de conexão com Evolution API: {e}")
+            logger.error("Verifique se a Evolution API está rodando em: " + self.evolution_api_url)
+            return False
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Timeout na conexão com Evolution API: {e}")
+            return False
         except Exception as e:
             logger.error(f"Erro ao testar conexão: {e}")
             return False
@@ -113,6 +123,7 @@ class WhatsAppSender:
                 endpoint = f"{self.evolution_api_url}/message/sendText/{self.instance_name}"
                 logger.info(f"Enviando mensagem de texto para {phone_number}")
             
+            logger.info(f"Fazendo requisição para: {endpoint}")
             response = requests.post(
                 endpoint,
                 headers=headers,
@@ -127,6 +138,13 @@ class WhatsAppSender:
                 logger.error(f"Erro ao enviar mensagem: {response.status_code} - {response.text}")
                 return False
                 
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Erro de conexão com Evolution API: {e}")
+            logger.error("Verifique se a Evolution API está rodando em: " + self.evolution_api_url)
+            return False
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Timeout na conexão com Evolution API: {e}")
+            return False
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem: {e}")
             return False
