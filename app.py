@@ -559,6 +559,7 @@ def send_product_now(product_id):
             sender = WhatsAppSender(db)
             
             message = product['message']
+            image_url = product.get('image_url')  # Obter URL da imagem
             group_id = sender.get_group_id()
             
             if not group_id:
@@ -567,7 +568,7 @@ def send_product_now(product_id):
                     'error': 'Grupo não configurado'
                 }), 400
             
-            success = sender.send_message(group_id, message)
+            success = sender.send_message(group_id, message, image_url)
             
             if success:
                 # Registrar log de envio

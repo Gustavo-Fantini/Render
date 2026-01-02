@@ -75,8 +75,12 @@ class WhatsAppSender:
             logger.error(f"Erro ao testar conexão: {e}")
             return False
     
-    def send_message(self, phone_number: str, message: str) -> bool:
-        """Envia mensagem via WhatsApp"""
+    def get_group_id(self) -> str:
+        """Retorna o ID do grupo configurado"""
+        return self.group_id
+    
+    def send_message(self, phone_number: str, message: str, image_url: str = None) -> bool:
+        """Envia mensagem via WhatsApp (texto ou imagem)"""
         if not self.connected:
             logger.error("Evolution API não configurada")
             return False
@@ -87,13 +91,33 @@ class WhatsAppSender:
                 'Content-Type': 'application/json'
             }
             
-            payload = {
-                "number": phone_number.replace('+', '').replace(' ', ''),
-                "text": message
-            }
+            # Enviar com imagem se fornecida
+            if image_url:
+                payload = {
+                    "number": phone_number.replace('+', '').replace(' ', ''),
+                    "mediatype": "image",
+                    "mimetype": "image/jpeg",
+                    "caption": message,
+                    "media": image_url,
+                    "fileName": "product.jpg",
+                    "delay": 0,
+                    "linkPreview": True
+                }
+                
+                endpoint = f"{self.evolution_api_url}/message/sendMedia/{self.instance_name}"
+                logger.info(f"Enviando mensagem com imagem para {phone_number}")
+            else:
+                # Enviar apenas texto
+                payload = {
+                    "number": phone_number.replace('+', '').replace(' ', ''),
+                    "text": message
+                }
+                
+                endpoint = f"{self.evolution_api_url}/message/sendText/{self.instance_name}"
+                logger.info(f"Enviando mensagem de texto para {phone_number}")
             
             response = requests.post(
-                f"{self.evolution_api_url}/message/sendText/{self.instance_name}",
+                endpoint,
                 headers=headers,
                 json=payload,
                 timeout=30
@@ -200,8 +224,9 @@ class ScheduledSender:
                         continue
                     
                     message = self.whatsapp_sender.format_promotion_message(product)
+                    image_url = product.get('image_url')  # Obter URL da imagem
                     
-                    success = self.whatsapp_sender.send_message(phone, message)
+                    success = self.whatsapp_sender.send_message(phone, message, image_url)
                     
                     # Registrar tentativa
                     self.db.log_send_attempt(

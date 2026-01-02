@@ -128,14 +128,16 @@ class SimpleScraper:
         
         logger.info("Iniciando scraping Amazon...")
         
-        # Título
+        # Título - mais seletores
         title_selectors = [
-            '#productTitle',  # ID exato do HTML
-            '.a-size-large.product-title-word-break',  # Classe exata
+            '#productTitle',  # ID principal
+            '.a-size-large.product-title-word-break',  # Classe principal
             'h1.a-size-large',  # h1 com classe
-            'h1[data-asin]',  # h1 com atributo
+            'h1[data-asin]',  # h1 com atributo ASIN
             '.product-title',
-            'meta[property="og:title"]'
+            'h1[id*="title"]',  # Qualquer h1 com title no ID
+            '[data-automation-id="title"]',  # Elemento com automation ID
+            'meta[property="og:title"]'  # Meta tag fallback
         ]
         
         for selector in title_selectors:
@@ -158,14 +160,21 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço - abordagem mais simples
+        # Preço - mais abordagens
         price_selectors = [
+            # Preço principal (com desconto)
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-fraction',
+            # Preços alternativos
             '.a-price-current',
             '.a-price .a-offscreen',
             '.a-price-whole',
             '.a-price-fraction',
             'span.a-price-whole',
+            '.a-price.a-size-medium.a-color-price',
+            '.a-price.a-text-price.a-size-medium.apexPriceToPay',
+            'span[data-a-color="price"]',
             'meta[property="product:price:amount"]'
         ]
         
@@ -198,16 +207,17 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de preço '{selector}': {e}")
                 continue
         
-        # Imagem
+        # Imagem - mais seletores
         image_selectors = [
-            '#landingImage',
-            '.a-dynamic-image',
-            'img[data-testid="product-image"]',
-            '.a-spacing-small .imgTagWrapper img',
-            '#imgBlkFront',
-            '.a-dynamic-image-container img',
-            'img[alt="Product image"]',
-            'meta[property="og:image"]'
+            '#landingImage',  # ID principal
+            '.a-dynamic-image',  # Classe principal
+            'img[data-testid="product-image"]',  # Imagem do produto
+            '.a-spacing-small .imgTagWrapper img',  # Wrapper da imagem
+            '#imgBlkFront',  # Imagem frontal
+            '.a-dynamic-image-container img',  # Container dinâmico
+            'img[alt*="Product"]',  # Qualquer imagem com Product no alt
+            'img[src*="images"]',  # Qualquer imagem com images no src
+            'meta[property="og:image"]'  # Meta tag fallback
         ]
         
         for selector in image_selectors:
