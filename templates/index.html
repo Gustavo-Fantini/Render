@@ -498,8 +498,8 @@
   <div class="container">
     <header class="header">
       <h1>ProScraper Pro</h1>
-      <p class="subtitle">Sistema Semi-Automático de Extração e Geração de Promoções</p>
-      <div class="version-badge">v9.0 - HEADLESS + ORQUESTRACAO + SUPABASE✨</div>
+      <p class="subtitle">Sistema Simplificado de Extração e Envios</p>
+      <div class="version-badge">v10.0 - BANCO LOCAL + MENSAGEM PADRÃO✨</div>
       
       <!-- Navigation Menu -->
       <nav class="nav-menu">
@@ -519,14 +519,6 @@
       <div class="card">
         <h2 class="section-title">⚙️ Painel de Controle</h2>
         
-        <!-- SELETOR DE MODO -->
-        <div class="form-group">
-          <label>Modo de Operação</label>
-          <select id="operationMode" onchange="switchMode()">
-            <option value="automatico">🤖 Automático (Extrair URL)</option>
-            <option value="semi-manual">📝 Semi-Manual (Dados Manuais)</option>
-            <option value="json-direto">📋 JSON Direto (Salvar Mensagem)</option>
-          </select>
           <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
             💡 Teste: Mude a opção acima para ver os campos aparecerem
           </small>
@@ -546,100 +538,15 @@
           </button>
         </div>
 
-        <!-- MODO SEMI-MANUAL -->
-        <div id="modeSemiManual" class="operation-mode">
-          <div class="form-group">
-            <label>Nome do Produto *</label>
-            <input type="text" id="manualTitle" placeholder="Ex: Smartphone Samsung Galaxy" required>
-          </div>
-          <div class="form-group">
-            <label>Preço Atual *</label>
-            <input type="text" id="manualPrice" placeholder="Ex: R$ 1.299,90" required>
-          </div>
-          <div class="form-group">
-            <label>Preço Original (opcional)</label>
-            <input type="text" id="manualOriginalPrice" placeholder="Ex: R$ 1.599,90">
-          </div>
-          <div class="form-group">
-            <label>URL do Produto *</label>
-            <input type="url" id="manualUrl" placeholder="https://exemplo.com/produto" required>
-          </div>
-          <div class="form-group">
-            <label>URL da Imagem (opcional)</label>
-            <input type="url" id="manualImage" placeholder="https://exemplo.com/imagem.jpg">
-          </div>
-          <button class="btn btn-primary btn-icon" onclick="processManualData()">
-            <span>📝</span> Processar Dados
-          </button>
-        </div>
-
-        <!-- MODO JSON DIRETO -->
-        <div id="modeJsonDireto" class="operation-mode">
-          <div class="form-group">
-            <label>Mensagem Completa *</label>
-            <textarea id="jsonMessage" rows="6" placeholder="🔥 OFERTA IMPERDÍVEL!&#10;Produto XYZ&#10;💰 R$ 999,90&#10;🔗 https://exemplo.com" required></textarea>
-          </div>
-          <div class="form-group">
-            <label>URL da Imagem (opcional)</label>
-            <input type="url" id="jsonImage" placeholder="https://exemplo.com/imagem.jpg">
-          </div>
-          <button class="btn btn-primary btn-icon" onclick="saveDirectly()">
-            <span>💾</span> Salvar no Supabase
-          </button>
-        </div>
-
+        
+        
         <!-- CONFIGURAÇÕES -->
         <div id="configurations">
                     
           
-          <div class="form-group">
-            <label>Configurações de Frete</label>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
-              <span style="font-size: 0.9rem;">Incluir Frete Grátis</span>
-              <div class="toggle-switch" id="toggleFrete">
-                <div class="toggle-slider"></div>
-              </div>
-            </div>
-            <div id="freteConfig" style="display: none; margin-top: 1rem;">
-              <input type="text" id="freteMinimo" placeholder="Valor mínimo (ex: R$ 79,90)" style="margin-bottom: 0.5rem;">
-              <select id="freteCondicao">
-                <option value="geral">Frete Grátis</option>
-                <option value="minimo">Frete Grátis acima de X</option>
-                <option value="prime">Frete Grátis Prime/Full</option>
-                <option value="regiao">Frete Grátis para sua região</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Configurações de Cupom</label>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
-              <span style="font-size: 0.9rem;">Incluir Cupom</span>
-              <div class="toggle-switch" id="toggleCupom">
-                <div class="toggle-slider"></div>
-              </div>
-            </div>
-            <div id="cupomConfig" style="display: none; margin-top: 1rem;">
-              <input type="text" id="cupomCodigo" placeholder="Código do cupom (ex: PROMO10)" style="margin-bottom: 0.5rem;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                <input type="number" id="cupomValor" placeholder="Valor do desconto">
-                <select id="cupomTipo">
-                  <option value="porcentagem">% de desconto</option>
-                  <option value="reais">R$ de desconto</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-                        <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
-              <span style="font-size: 0.9rem;">Salvar no Supabase</span>
-              <div class="toggle-switch active" id="toggleSupabase">
-                <div class="toggle-slider"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+          
+          
+                  </div>
 
         <div class="status-bar" id="statusBar">
           <div class="status-indicator"></div>
@@ -696,24 +603,7 @@
     </div>
   </div>
 
-    <div class="card" id="supabasePanel" style="margin: 1.5rem auto; max-width: 1400px;">
-    <h2 class="section-title">Supabase em tempo real</h2>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="sbTotal">-</div>
-        <div class="stat-label">Registros totais</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="sbPendentes">-</div>
-        <div class="stat-label">Pendentes de envio</div>
-      </div>
-    </div>
-    <div style="margin-top: 1rem;">
-      <h3 style="color: var(--accent-primary); margin-bottom: 0.75rem;">Ultimas postagens</h3>
-      <div id="sbList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;"></div>
-    </div>
-  </div>
-<div class="notification" id="notification"></div>
+    <div class="notification" id="notification"></div>
 
   <script>
     // ESTADO GLOBAL
@@ -750,55 +640,6 @@
 
     function sanitizeForJson(text) {
       return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-    }
-
-    // ALTERNÂNCIA DE MODOS
-    function switchMode() {
-      const mode = document.getElementById('operationMode').value;
-      console.log('Modo selecionado:', mode); // Debug
-      
-      // Ocultar todos os modos
-      document.querySelectorAll('.operation-mode').forEach(el => {
-        el.classList.remove('active');
-        el.style.display = 'none';
-      });
-      
-      // Mostrar modo selecionado
-      let targetModeId = '';
-      switch(mode) {
-        case 'automatico':
-          targetModeId = 'modeAutomatico';
-          break;
-        case 'semi-manual':
-          targetModeId = 'modeSemiManual';
-          break;
-        case 'json-direto':
-          targetModeId = 'modeJsonDireto';
-          break;
-      }
-      
-      console.log('Procurando elemento:', targetModeId); // Debug
-      const activeMode = document.getElementById(targetModeId);
-      if (activeMode) {
-        activeMode.classList.add('active');
-        activeMode.style.display = 'block';
-        console.log('Modo ativado:', targetModeId); // Debug
-      } else {
-        console.error('Elemento não encontrado:', targetModeId); // Debug
-      }
-      
-      // Mostrar/ocultar configurações
-      const configs = document.getElementById('configurations');
-      if (configs) {
-        configs.style.display = mode === 'json-direto' ? 'none' : 'block';
-      }
-      
-      // Limpar resultados
-      const productPreview = document.getElementById('productPreview');
-      const messagesContainer = document.getElementById('messagesContainer');
-      if (productPreview) productPreview.style.display = 'none';
-      if (messagesContainer) messagesContainer.style.display = 'none';
-      currentProduct = null;
     }
 
     // MODO AUTOMÁTICO
@@ -844,119 +685,8 @@
       }
     }
 
-    // MODO SEMI-MANUAL
-    async function processManualData() {
-      const title = document.getElementById('manualTitle').value.trim();
-      const price = document.getElementById('manualPrice').value.trim();
-      const url = document.getElementById('manualUrl').value.trim();
-      
-      if (!title || !price || !url) {
-        showNotification('Preencha os campos obrigatórios', 'error');
-        return;
-      }
-
-      showLoader();
-      showStatus('Processando dados...');
-      const startTime = Date.now();
-      stats.total++;
-
-      try {
-        const payload = {
-          titulo: title,
-          preco_atual: price,
-          preco_original: document.getElementById('manualOriginalPrice').value.trim(),
-          url_produto: url,
-          url_imagem: document.getElementById('manualImage').value.trim()
-        };
-
-        const response = await fetch('/semi-auto/manual-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-          currentProduct = data.data;
-          stats.success++;
-          stats.totalTime += Date.now() - startTime;
-          
-          displayProduct(currentProduct);
-          generateMessages();
-          showStatus('Dados processados!');
-          showNotification('Produto criado com sucesso!', 'success');
-        } else {
-          throw new Error(data.error);
-        }
-      } catch (error) {
-        showStatus('Erro no processamento');
-        showNotification(`Erro: ${error.message}`, 'error');
-      } finally {
-        showLoader(false);
-        updateStats();
-      }
-    }
-
-    // MODO JSON DIRETO
-    async function saveDirectly() {
-      const message = document.getElementById('jsonMessage').value.trim();
-      if (!message) {
-        showNotification('Insira a mensagem', 'error');
-        return;
-      }
-
-      showLoader();
-      showStatus('Salvando mensagem...');
-      stats.total++;
-
-      try {
-        const payload = {
-          mensagem: message,
-          url_imagem: document.getElementById('jsonImage').value.trim()
-        };
-
-        const response = await fetch('/semi-auto/json-direct', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-          stats.success++;
-          stats.saved++;
-          
-          showStatus('Salvo no Supabase!');
-          showNotification('Mensagem salva com sucesso!', 'success');
-          
-          // Mostrar mensagem de sucesso
-          const successDiv = document.createElement('div');
-          successDiv.className = 'success-message';
-          successDiv.textContent = '✅ Mensagem enviada diretamente para o Supabase!';
-          document.getElementById('statusBar').insertAdjacentElement('afterend', successDiv);
-          
-          setTimeout(() => successDiv.remove(), 5000);
-          
-          // Recarregar dados do Supabase imediatamente após salvar
-          loadSupabaseData();
-          
-          // Limpar campos
-          document.getElementById('jsonMessage').value = '';
-          document.getElementById('jsonImage').value = '';
-        } else {
-          throw new Error(data.error);
-        }
-      } catch (error) {
-        showStatus('Erro ao salvar');
-        showNotification(`Erro: ${error.message}`, 'error');
-      } finally {
-        showLoader(false);
-        updateStats();
-      }
-    }
-
+    
+    
     // EXIBIR PRODUTO
     function displayProduct(product) {
       const preview = document.getElementById('productPreview');
@@ -1071,32 +801,12 @@ ${sellerText}
       // Botão Salvar
       const btnSave = document.createElement('button');
       btnSave.className = 'btn-small btn-save';
-      btnSave.innerHTML = '🚀 Enviar';
-      btnSave.onclick = async () => {
-        btnSave.disabled = true;
-        btnSave.innerHTML = '⏳ Enviando...';
-        
-        try {
-          const textarea = messageDiv.querySelector('.message-text');
-          await saveToSupabase(textarea.value);
-          btnSave.innerHTML = '✅ Enviado!';
-          btnSave.style.background = '#00ff88';
-          
-          setTimeout(() => {
-            btnSave.innerHTML = '🚀 Enviar';
-            btnSave.style.background = '';
-            btnSave.disabled = false;
-          }, 2000);
-        } catch (error) {
-          btnSave.innerHTML = '❌ Erro';
-          btnSave.style.background = '#ff6b6b';
-          
-          setTimeout(() => {
-            btnSave.innerHTML = '🚀 Enviar';
-            btnSave.style.background = '';
-            btnSave.disabled = false;
-          }, 2000);
-        }
+      btnSave.innerHTML = '📋 Copiar';
+      btnSave.onclick = () => {
+        const textarea = messageDiv.querySelector('.message-text');
+        const textToCopy = textarea.value;
+        navigator.clipboard.writeText(textToCopy);
+        showNotification('Mensagem copiada!', 'success');
       };
 
       actionsDiv.appendChild(btnEdit);
@@ -1141,73 +851,8 @@ ${sellerText}
       }
     }
 
-    // SALVAR NO SUPABASE
-    async function saveToSupabase(messageText) {
-      const imageUrl = currentProduct?.fields?.image_url?.value || '';
-      const sanitizedMessage = messageText.replace(/\\n/g, '\n');
+    
 
-      const response = await fetch('/supabase/save-promotion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mensagem: sanitizedMessage,
-          imagem_url: imageUrl
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        stats.saved++;
-        updateStats();
-        showNotification('Enviado para Supabase!', 'success');
-      } else {
-        throw new Error(result.error || 'Erro ao salvar');
-      }
-    }
-
-
-    // SUPABASE - LISTAGEM E ESTATISTICAS
-    async function loadSupabaseData() {
-      try {
-        const statsRes = await fetch('/supabase/stats');
-        const statsJson = await statsRes.json();
-        if (statsJson.success) {
-          const total = (statsJson.stats && statsJson.stats.total) || '-';
-          const pend = (statsJson.stats && statsJson.stats.pendentes) || '-';
-          const elTotal = document.getElementById('sbTotal');
-          const elPend = document.getElementById('sbPendentes');
-          if (elTotal) elTotal.textContent = total;
-          if (elPend) elPend.textContent = pend;
-        }
-        const listRes = await fetch('/supabase/list?limit=20');
-        const listJson = await listRes.json();
-        if (listJson.success) {
-          const list = Array.isArray(listJson.data) ? listJson.data : [];
-          const container = document.getElementById('sbList');
-          if (container) {
-            container.innerHTML = '';
-            list.forEach(item => {
-              const card = document.createElement('div');
-              card.className = 'message-container';
-              const createdAt = item.criado_em || '';
-              const sent = item.enviado ? 'Enviado' : 'Pendente';
-              const dateStr = createdAt ? new Date(createdAt).toLocaleString('pt-BR') : '';
-              card.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;color:var(--text-secondary);font-size:.85rem;">
-                  <span>${dateStr}</span>
-                  <span>${sent}</span>
-                </div>
-                <div style="white-space:pre-wrap;line-height:1.5;">${(item.mensagem || '').replace(/\\n/g,'\n')}</div>
-              `;
-              container.appendChild(card);
-            });
-          }
-        }
-      } catch (e) {
-        console.warn('Falha ao carregar Supabase:', e);
-      }
-    }
     // DETECTAR SITE PELA URL
     document.getElementById('productUrl').addEventListener('input', function(e) {
       const url = e.target.value;
@@ -1227,42 +872,24 @@ ${sellerText}
       status.textContent = icon;
     });
 
-    // EVENT LISTENERS PARA TOGGLES
-    document.querySelectorAll('.toggle-switch').forEach(toggle => {
-      toggle.addEventListener('click', function() {
-        this.classList.toggle('active');
-        
-        if (this.id === 'toggleFrete') {
-          document.getElementById('freteConfig').style.display = 
-            this.classList.contains('active') ? 'block' : 'none';
-        } else if (this.id === 'toggleCupom') {
-          document.getElementById('cupomConfig').style.display = 
-            this.classList.contains('active') ? 'block' : 'none';
-        }
-      });
-    });
-
+    
     // INICIALIZAÇÃO
     function initializeApp() {
       console.log('Inicializando aplicação...');
       
-      // Verificar se todos os elementos existem
+      // Verificar elementos essenciais
       const requiredElements = [
-        'operationMode', 'modeAutomatico', 'modeSemiManual', 'modeJsonDireto',
-        'configurations', 'productPreview', 'messagesContainer'
+        'productUrl', 'productPreview', 'messagesContainer'
       ];
       
       requiredElements.forEach(id => {
         const element = document.getElementById(id);
-        console.log(`Elemento ${id}:`, element ? 'Encontrado' : 'NÃO ENCONTRADO');
+        if (!element) {
+          console.error(`Elemento ${id} não encontrado!`);
+        }
       });
       
-      // Carregar dados iniciais
-      loadSupabaseData();
-      // Atualizar a cada 5 minutos
-      setInterval(loadSupabaseData, 300000);
       updateStats();
-      switchMode(); // Inicializar com modo padrão
       showStatus('Sistema carregado e pronto!');
     }
 
@@ -1273,7 +900,7 @@ ${sellerText}
       initializeApp();
     }
 
-    console.log('🚀 ProScraper Pro v8.1 - Sistema Semi-Automático Carregado!');
+    console.log('🚀 ProScraper Pro v10.0 - Sistema Simplificado Carregado!');
   </script>
 </body>
 </html>
