@@ -11,7 +11,8 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class SimpleScraper:
-    """Scraper simplificado para extrair apenas título, preço e imagem"""
+    """# ProScraper Pro v10.0.1 - Sistema Profissional de Scraping e Envios Automáticos
+# Sistema simplificado de scraping para e-commerce brasileiro apenas título, preço e imagem"""
     
     def __init__(self):
         self.session = self._create_session()

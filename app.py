@@ -121,7 +121,7 @@ def index():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProScraper Pro - Sistema de Envios Automáticos</title>
+    <title>ProScraper Pro v10.0.1 - Sistema Profissional de Scraping e Envios Automáticos</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">

@@ -8,7 +8,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class LocalDatabase:
-    """Sistema de banco de dados local com SQLite"""
+    """# ProScraper Pro v10.0.1 - Sistema Profissional de Scraping e Envios Automáticos
+# Banco de dados local com SQLite para produtos, contatos e configurações"""
     
     def __init__(self, db_path: str = "proscraper.db"):
         self.db_path = db_path

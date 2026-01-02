@@ -11,7 +11,8 @@ from database import LocalDatabase
 logger = logging.getLogger(__name__)
 
 class WhatsAppSender:
-    """Sistema de envio automático de mensagens via Evolution API com nova estrutura"""
+    """# ProScraper Pro v10.0.1 - Sistema Profissional de Scraping e Envios Automáticos
+# Sistema de agendamento e envio de mensagens via Evolution API"""
     
     def __init__(self, db: LocalDatabase):
         self.db = db

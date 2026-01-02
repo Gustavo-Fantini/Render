@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+ProScraper Pro v10.0.1 - Sistema Profissional de Scraping e Envios Automáticos
 Script para configurar Evolution API no Render
 Execute este script quando tiver a URL do Render da Evolution API
 """

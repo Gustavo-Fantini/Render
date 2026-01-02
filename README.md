@@ -1,189 +1,209 @@
-# 🚀 ProScraper Pro v8.1 - Sistema de Scraping Inteligente
+# ProScraper Pro v10.0.1
 
-## 📋 Visão Geral
+🚀 **Sistema Profissional de Scraping e Envios Automáticos via WhatsApp**
 
-O ProScraper Pro é um sistema avançado de web scraping que extrai informações de produtos de 4 principais marketplaces brasileiros:
+## 📋 **Visão Geral**
 
-- ✅ **Magazine Luiza** - Funcionamento perfeito
-- ✅ **Mercado Livre** - Funcionamento perfeito  
-- ✅ **Amazon Brasil** - Funcionamento bom
-- ✅ **Shopee Brasil** - Melhorado significativamente
+O ProScraper Pro é uma aplicação web completa para extração de dados de e-commerce e envio automatizado de mensagens promocionais via WhatsApp através da Evolution API.
 
-## 🎯 Problema Resolvido
+### ✨ **Recursos Principais**
 
-O Shopee era o site mais problemático devido ao carregamento dinâmico via JavaScript. Implementamos múltiplas estratégias para resolver:
+- 🛒 **Scraping Multiplataforma**: Mercado Livre, Amazon, Magazine Luiza
+- 📱 **Envios Automáticos**: WhatsApp via Evolution API
+- 🔐 **Sistema de Login**: Acesso seguro com autenticação
+- ⏰ **Agendador Inteligente**: Envios programados
+- 🎯 **Gestão de Produtos**: CRUD completo
+- 📊 **Painel Administrativo**: Interface moderna e responsiva
+- 🔍 **Logs Detalhados**: Monitoramento completo
 
-1. **APIs Múltiplas** - Tentativa de diferentes endpoints da API oficial
-2. **API Mobile** - Uso de endpoints mobile que às vezes funcionam melhor
-3. **Selenium Melhorado** - Renderização JavaScript com anti-detecção
-4. **Fallback Inteligente** - Base de dados de produtos conhecidos
-5. **Web Scraping Mobile** - Extração da versão mobile do site
+## 🚀 **Versão 10.0.1**
 
-## 📊 Resultados
+### 🆕 **Novidades**
+- ✅ Sistema de login seguro
+- ✅ Configuração simplificada para Evolution API
+- ✅ Tratamento robusto de erros
+- ✅ Interface otimizada
+- ✅ Código limpo e documentado
 
-### Antes da Melhoria
-- ❌ Shopee: ~20% de sucesso
-- ❌ Muitos timeouts e erros
-- ❌ Dados incompletos
+### 🔧 **Melhorias**
+- Performance otimizada
+- Segurança aprimorada
+- Logs mais detalhados
+- Tratamento de exceções
 
-### Após a Melhoria  
-- ✅ Shopee: ~70% de sucesso
-- ✅ Múltiplas estratégias de fallback
-- ✅ Dados completos e precisos
-- ✅ Logs detalhados para debug
+## 🛠️ **Tecnologias Utilizadas**
 
-## 🚀 Como Usar
+### **Backend**
+- **Flask**: Framework web Python
+- **SQLite**: Banco de dados local
+- **BeautifulSoup4**: Web scraping
+- **Requests**: Cliente HTTP
+- **Schedule**: Agendador de tarefas
 
-### 1. Instalação
+### **Frontend**
+- **HTML5**: Estrutura semântica
+- **Tailwind CSS**: Framework CSS moderno
+- **JavaScript**: Interatividade
+- **Fetch API**: Requisições assíncronas
+
+### **Infraestrutura**
+- **Docker**: Contêineres
+- **Render**: Hospedagem na nuvem
+- **Evolution API**: Integração WhatsApp
+- **Git**: Controle de versão
+
+## 📦 **Instalação**
+
+### **Pré-requisitos**
+- Python 3.8+
+- Docker
+- Git
+
+### **Passos**
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/Gustavo-Fantini/Render.git
+   cd Render
+   ```
+
+2. **Instale dependências**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Inicie a aplicação**
+   ```bash
+   python app.py
+   ```
+
+4. **Acesse o sistema**
+   - URL: `http://localhost:5000`
+   - Login: `gustavofantini`
+   - Senha: `Gustavinho12`
+
+## 🔧 **Configuração**
+
+### **Evolution API**
+
+1. **Configure a Evolution API**
+   ```bash
+   python setup_render_api.py
+   ```
+
+2. **Informe os dados solicitados**
+   - URL do Render da Evolution API
+   - API Key
+   - Instance Name
+   - Group ID
+
+### **Variáveis de Ambiente**
+
 ```bash
-pip install flask flask-cors requests beautifulsoup4 selenium supabase
+FLASK_ENV=development
+FLASK_DEBUG=True
 ```
 
-### 2. Executar
+## 📱 **Funcionalidades**
+
+### **Scraping**
+- **Mercado Livre**: Extração completa de produtos
+- **Amazon**: Scraping robusto com fallbacks
+- **Magazine Luiza**: Dados de produtos e preços
+
+### **Envios**
+- **Mensagens de Texto**: Envio imediato
+- **Mensagens com Imagem**: Produtos com fotos
+- **Agendamento**: Envios programados
+- **Grupos**: Suporte a grupos WhatsApp
+
+### **Gestão**
+- **Produtos**: Adicionar, editar, excluir
+- **Contatos**: Gerenciamento de destinatários
+- **Logs**: Histórico de envios
+- **Estatísticas**: Dashboard informativo
+
+## 🏗️ **Estrutura do Projeto**
+
+```
+Render/
+├── app.py                 # Aplicação Flask principal
+├── database.py            # Gerenciamento do banco de dados
+├── scheduler.py           # Sistema de agendamento
+├── simple_scraper.py      # Web scraping
+├── templates/             # Templates HTML
+│   ├── index.html         # Dashboard principal
+│   ├── login.html        # Página de login
+│   └── sender_simple.html # Painel de envios
+├── setup_render_api.py    # Configuração Evolution API
+├── requirements.txt       # Dependências Python
+└── README.md            # Documentação
+```
+
+## 🔐 **Segurança**
+
+- **Autenticação**: Sistema de login seguro
+- **Hash de Senhas**: SHA256 para armazenamento
+- **Sessões**: Gerenciamento seguro de sessões
+- **Validação**: Sanitização de dados
+- **CORS**: Configuração segura de cross-origin
+
+## 📊 **Monitoramento**
+
+### **Logs**
+- **Arquivo de Log**: `proscraper.log`
+- **Níveis**: INFO, WARNING, ERROR
+- **Rotação**: Logs organizados por data
+
+### **Estatísticas**
+- **Produtos**: Total, enviados, pendentes
+- **Contatos**: Ativos e inativos
+- **Envios**: Sucesso e falhas
+- **Performance**: Tempo de resposta
+
+## 🚀 **Deploy**
+
+### **Render**
+1. **Conecte o repositório** ao Render
+2. **Configure as variáveis de ambiente**
+3. **Configure a Evolution API**
+4. **Teste a aplicação**
+
+### **Docker**
 ```bash
-python app.py
+docker build -t proscraper-pro .
+docker run -p 5000:5000 proscraper-pro
 ```
 
-### 3. Acessar
-```
-http://localhost:5000
-```
+## 🔄 **Atualizações**
 
-## 📱 Interface Web
+### **Controle de Versões**
+- **Major**: Mudanças estruturais
+- **Minor**: Novas funcionalidades
+- **Patch**: Correções e melhorias
 
-A interface web moderna permite:
+### **Histórico**
+- **v10.0.1**: Sistema de login + segurança
+- **v10.0.0**: Versão inicial completa
 
-- **Modo Automático**: Cole URLs e extraia dados automaticamente
-- **Modo Semi-Automático**: Insira dados manualmente
-- **Modo JSON Direto**: Cole mensagens prontas para o Supabase
-- **Visualização em Tempo Real**: Veja os resultados instantaneamente
+## 🤝 **Suporte**
 
-## 🔌 API REST
+### **Documentação**
+- **README**: Informações gerais
+- **Código**: Comentários detalhados
+- **Logs**: Mensagens informativas
 
-### Extração Automática
-```bash
-curl -X POST http://localhost:5000/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://s.shopee.com.br/BK43vpheP"}'
-```
+### **Contato**
+- **Desenvolvedor**: Gustavo Fantini
+- **Versão**: 10.0.1
+- **Status**: Produção
 
-### Dados Manuais
-```bash
-curl -X POST http://localhost:5000/semi-auto/manual-data \
-  -H "Content-Type: application/json" \
-  -d '{
-    "titulo": "Produto Teste",
-    "preco_atual": "R$ 99,90",
-    "preco_original": "R$ 149,90",
-    "url_produto": "https://exemplo.com",
-    "url_imagem": "https://exemplo.com/imagem.jpg"
-  }'
-```
+## 📝 **Licença**
 
-### JSON Direto
-```bash
-curl -X POST http://localhost:5000/semi-auto/json-direct \
-  -H "Content-Type: application/json" \
-  -d '{
-    "mensagem": "🔥 OFERTA IMPERDÍVEL! 🔥\\n\\nProduto incrível por apenas R$ 99,90!",
-    "url_imagem": "https://exemplo.com/imagem.jpg"
-  }'
-```
-
-## 📁 Estrutura do Projeto
-
-```
-teste-site-fantini/
-├── app.py                          # Aplicação principal
-├── templates/
-│   └── index.html                  # Interface web
-├── test_shopee_improved.py         # Teste do Shopee
-├── SHOPEE_SOLUTION.md              # Documentação Shopee
-├── SOLUTION_SUMMARY.md             # Resumo completo
-├── proscraper.log                  # Logs detalhados
-└── shopee_test_*_result.json       # Resultados dos testes
-```
-
-## 🔧 Funcionalidades
-
-### ✅ Extração Automática
-- Identificação automática do site
-- Resolução de URLs encurtadas
-- Extração de título, preços, desconto, rating, reviews, imagem
-- Cálculo automático de desconto
-- Formatação correta de preços brasileiros
-
-### ✅ Modo Semi-Automático
-- Entrada manual de dados do produto
-- Geração automática de mensagens
-- Integração com Supabase
-- Múltiplos formatos de entrada
-
-### ✅ Sistema Robusto
-- Múltiplas tentativas de requisição
-- Headers anti-detecção
-- Timeouts configuráveis
-- Logs detalhados
-- Tratamento de erros
-
-## 📊 Performance
-
-| Site | Taxa de Sucesso | Tempo Médio | Dados Extraídos |
-|------|----------------|-------------|-----------------|
-| Magazine Luiza | 95% | 3-5s | 6/6 campos |
-| Mercado Livre | 95% | 2-4s | 6/6 campos |
-| Amazon | 85% | 4-6s | 5/6 campos |
-| Shopee | 70% | 15-25s | 5/6 campos |
-
-## 🛠️ Tecnologias
-
-- **Backend**: Python, Flask
-- **Web Scraping**: BeautifulSoup, Selenium, Requests
-- **Frontend**: HTML, CSS, JavaScript
-- **Database**: Supabase
-- **Logging**: Python logging
-
-## 🔍 Debug e Monitoramento
-
-### Logs
-- Todos os logs são salvos em `proscraper.log`
-- Logs incluem cada etapa da extração
-- Erros são documentados com contexto
-
-### Health Check
-```bash
-curl http://localhost:5000/health
-```
-
-### Testes
-```bash
-python test_shopee_improved.py
-```
-
-## 📞 Suporte
-
-Para problemas específicos:
-
-1. Verifique os logs em `proscraper.log`
-2. Execute os testes específicos
-3. Analise os arquivos JSON de resultado
-4. Consulte a documentação detalhada
-
-## 🎯 Próximos Passos
-
-1. **Monitoramento Contínuo**: Acompanhar taxa de sucesso
-2. **Otimização de Tempo**: Reduzir tempo do Shopee
-3. **Expansão da Base**: Adicionar mais produtos conhecidos
-4. **Cache Inteligente**: Implementar cache para URLs repetidas
-5. **Proxy Rotation**: Se necessário para evitar bloqueios
-
-## 📄 Licença
-
-Este projeto é para uso interno e educacional.
+Este projeto é proprietário e confidencial.
 
 ---
 
-**Versão**: ProScraper Pro v8.1 - Enhanced  
-**Data**: Agosto 2025  
-**Status**: ✅ Pronto para Produção  
-**Desenvolvido por**: Assistente IA
+**ProScraper Pro v10.0.1** - *Sistema Profissional de Scraping e Envios Automáticos*
+
+🚀 **Desenvolvido com ❤️ por Gustavo Fantini**
