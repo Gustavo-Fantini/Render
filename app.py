@@ -38,6 +38,7 @@ import os
 from supabase import create_client, Client
 import subprocess
 import threading
+from scheduler import ScheduledSender
 
 # Classe de Automação Shopee com Chrome
 class ShopeeAutomationChrome:
@@ -319,9 +320,15 @@ class ProScraper:
         try:
             self.supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
             logger.info("Supabase conectado com sucesso")
+            
+            # Inicializar sistema de agendamento
+            self.scheduler = ScheduledSender(self.supabase)
+            logger.info("Sistema de agendamento inicializado")
+            
         except Exception as e:
             logger.error(f"Erro ao conectar Supabase: {e}")
             self.supabase = None
+            self.scheduler = None
 
 
     def _create_robust_session(self) -> requests.Session:
@@ -3246,6 +3253,283 @@ class ProScraper:
 
 # Instância global do scraper
 scraper = ProScraper()
+
+# ==================== ROTAS DO SISTEMA DE ENVIOS ====================
+
+@app.route('/sender', methods=['GET'])
+def sender_page():
+    """Página de gerenciamento do sistema de envios"""
+    return render_template('sender.html')
+
+@app.route('/api/sender/status', methods=['GET'])
+def get_sender_status():
+    """Retorna status do sistema de envios"""
+    try:
+        if scraper.scheduler:
+            status = scraper.scheduler.get_status()
+            return jsonify({
+                'success': True,
+                'status': status
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Sistema de agendamento não inicializado'
+            }), 500
+    except Exception as e:
+        logger.error(f"Erro ao obter status do sender: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/start', methods=['POST'])
+def start_sender():
+    """Inicia o sistema de envios automáticos"""
+    try:
+        if not scraper.scheduler:
+            return jsonify({
+                'success': False,
+                'error': 'Sistema de agendamento não inicializado'
+            }), 500
+        
+        scraper.scheduler.start_scheduler()
+        logger.info("Sistema de envios iniciado via API")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sistema de envios iniciado com sucesso'
+        })
+    except Exception as e:
+        logger.error(f"Erro ao iniciar sender: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/stop', methods=['POST'])
+def stop_sender():
+    """Para o sistema de envios automáticos"""
+    try:
+        if not scraper.scheduler:
+            return jsonify({
+                'success': False,
+                'error': 'Sistema de agendamento não inicializado'
+            }), 500
+        
+        scraper.scheduler.stop_scheduler()
+        logger.info("Sistema de envios parado via API")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sistema de envios parado com sucesso'
+        })
+    except Exception as e:
+        logger.error(f"Erro ao parar sender: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/configure-whatsapp', methods=['POST'])
+def configure_whatsapp():
+    """Configura a conexão com Evolution API"""
+    try:
+        data = request.get_json()
+        
+        api_url = data.get('api_url')
+        api_key = data.get('api_key')
+        instance_name = data.get('instance_name')
+        
+        if not all([api_url, api_key, instance_name]):
+            return jsonify({
+                'success': False,
+                'error': 'Todos os campos são obrigatórios: api_url, api_key, instance_name'
+            }), 400
+        
+        if not scraper.scheduler:
+            return jsonify({
+                'success': False,
+                'error': 'Sistema de agendamento não inicializado'
+            }), 500
+        
+        success = scraper.scheduler.configure_whatsapp(api_url, api_key, instance_name)
+        
+        if success:
+            logger.info("WhatsApp configurado via API")
+            return jsonify({
+                'success': True,
+                'message': 'WhatsApp configurado com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Falha ao configurar WhatsApp'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Erro ao configurar WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/test-connection', methods=['POST'])
+def test_whatsapp_connection():
+    """Testa conexão com Evolution API"""
+    try:
+        if not scraper.scheduler or not scraper.scheduler.whatsapp_sender.connected:
+            return jsonify({
+                'success': False,
+                'error': 'WhatsApp não configurado'
+            }), 400
+        
+        success = scraper.scheduler.whatsapp_sender.test_connection()
+        
+        return jsonify({
+            'success': success,
+            'message': 'Conexão bem-sucedida' if success else 'Falha na conexão'
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao testar conexão: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/send-test', methods=['POST'])
+def send_test_message():
+    """Envia mensagem de teste"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        
+        if not phone_number:
+            return jsonify({
+                'success': False,
+                'error': 'Número de telefone é obrigatório'
+            }), 400
+        
+        if not scraper.scheduler or not scraper.scheduler.whatsapp_sender.connected:
+            return jsonify({
+                'success': False,
+                'error': 'WhatsApp não configurado'
+            }), 400
+        
+        # Mensagem de teste
+        test_message = f"🧪 *Mensagem de Teste*\n\nSistema de envios automático funcionando!\n\n⏰ {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        
+        success = scraper.scheduler.whatsapp_sender.send_message(phone_number, test_message)
+        
+        if success:
+            logger.info(f"Mensagem de teste enviada para {phone_number}")
+            return jsonify({
+                'success': True,
+                'message': 'Mensagem de teste enviada com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Falha ao enviar mensagem de teste'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Erro ao enviar mensagem de teste: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/contacts', methods=['GET', 'POST'])
+def manage_contacts():
+    """Gerencia contatos para envio"""
+    try:
+        if request.method == 'GET':
+            # Listar contatos
+            response = scraper.supabase.table('contacts').select('*').eq('active', True).execute()
+            return jsonify({
+                'success': True,
+                'contacts': response.data or []
+            })
+        
+        elif request.method == 'POST':
+            # Adicionar contato
+            data = request.get_json()
+            name = data.get('name')
+            phone_number = data.get('phone_number')
+            
+            if not all([name, phone_number]):
+                return jsonify({
+                    'success': False,
+                    'error': 'Nome e número de telefone são obrigatórios'
+                }), 400
+            
+            response = scraper.supabase.table('contacts').insert({
+                'name': name,
+                'phone_number': phone_number,
+                'active': True,
+                'created_at': datetime.now().isoformat()
+            }).execute()
+            
+            logger.info(f"Contato {name} adicionado")
+            return jsonify({
+                'success': True,
+                'message': 'Contato adicionado com sucesso',
+                'contact': response.data[0] if response.data else None
+            })
+            
+    except Exception as e:
+        logger.error(f"Erro ao gerenciar contatos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/sender/stats', methods=['GET'])
+def get_sender_stats():
+    """Retorna estatísticas do sistema de envios"""
+    try:
+        # Estatísticas de produtos
+        products_response = scraper.supabase.table('products').select('*').execute()
+        products = products_response.data or []
+        
+        total_products = len(products)
+        sent_products = len([p for p in products if p.get('enviado') or p.get('sent')])
+        pending_products = total_products - sent_products
+        
+        # Estatísticas de contatos
+        contacts_response = scraper.supabase.table('contacts').select('*').eq('active', True).execute()
+        active_contacts = len(contacts_response.data or [])
+        
+        # Status do scheduler
+        scheduler_status = scraper.scheduler.get_status() if scraper.scheduler else {}
+        
+        stats = {
+            'products': {
+                'total': total_products,
+                'sent': sent_products,
+                'pending': pending_products
+            },
+            'contacts': {
+                'active': active_contacts
+            },
+            'scheduler': scheduler_status
+        }
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter estatísticas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ==================== FIM DAS ROTAS DO SISTEMA DE ENVIOS ====================
 
 @app.route('/')
 def index():

@@ -40,6 +40,46 @@
       margin-bottom: 2rem;
     }
     
+    .nav-menu {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+    
+    .nav-link:hover {
+      background: var(--accent-primary);
+      color: var(--bg-primary);
+      border-color: var(--accent-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    
+    .nav-link.active {
+      background: var(--accent-primary);
+      color: var(--bg-primary);
+      border-color: var(--accent-primary);
+    }
+    
+    .nav-link i {
+      font-size: 1rem;
+    }
+    
     h1 {
       font-size: 2.5rem;
       font-weight: 300;
@@ -460,6 +500,18 @@
       <h1>ProScraper Pro</h1>
       <p class="subtitle">Sistema Semi-Automático de Extração e Geração de Promoções</p>
       <div class="version-badge">v9.0 - HEADLESS + ORQUESTRACAO + SUPABASE✨</div>
+      
+      <!-- Navigation Menu -->
+      <nav class="nav-menu">
+        <a href="/" class="nav-link active">
+          <i class="fas fa-home"></i>
+          <span>Extração</span>
+        </a>
+        <a href="/sender" class="nav-link">
+          <i class="fas fa-paper-plane"></i>
+          <span>Envios</span>
+        </a>
+      </nav>
     </header>
 
     <div class="main-grid">
