@@ -131,6 +131,8 @@ class SimpleScraper:
             '#productTitle',
             '.product-title',
             'h1.a-size-large',
+            'h1[data-asin]',
+            '.a-size-large.product-title-word-break',
             'meta[property="og:title"]'
         ]
         
@@ -159,9 +161,14 @@ class SimpleScraper:
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
             '.a-price-current .a-offscreen',
             '.a-price .a-offscreen',
-            # Preço padrão (fallback)
+            '.a-price-current',
+            '.a-price.a-size-medium.a-color-price',
+            '.a-price.a-text-price.a-size-medium.apexPriceToPay',
             '.a-price-whole',
             '.a-price .a-price-whole',
+            'span.a-price.a-text-price.a-size-medium.apexPriceToPay',
+            'span.a-price.a-text-price',
+            'span[data-a-color="price"]',
             'meta[property="product:price:amount"]'
         ]
         
@@ -195,6 +202,10 @@ class SimpleScraper:
             '#landingImage',
             '.a-dynamic-image',
             'img[data-testid="product-image"]',
+            '.a-spacing-small .imgTagWrapper img',
+            '#imgBlkFront',
+            '.a-dynamic-image-container img',
+            'img[alt="Product image"]',
             'meta[property="og:image"]'
         ]
         
@@ -256,6 +267,9 @@ class SimpleScraper:
             '.ui-pdp-price__current .andes-money-amount__fraction',
             '.ui-pdp-price__current .price-tag-fraction',
             '.andes-money-amount-combo__main .andes-money-amount__fraction',
+            '.ui-pdp-price__discount-and-cents .andes-money-amount__fraction',
+            '.price-tag-12 .price-tag-fraction',
+            '.andes-money-amount__fraction[aria-hidden="true"]',
             # Preço padrão (fallback)
             '.andes-money-amount__fraction',
             '.price-tag-fraction',
