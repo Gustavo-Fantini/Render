@@ -3,6 +3,8 @@ from flask_cors import CORS
 import logging
 from datetime import datetime
 from database import LocalDatabase
+from evolution_service import init_evolution_service
+from whatsapp_manager import init_whatsapp_manager, get_whatsapp_manager
 from simple_scraper import SimpleScraper
 from scheduler import ScheduledSender
 
@@ -20,10 +22,23 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Inicializar banco de dados local
+# Inicialização do banco de dados e serviços
 db = LocalDatabase()
 scraper = SimpleScraper()
 scheduler = ScheduledSender(db)
+
+# Inicializar serviços WhatsApp
+whatsapp_manager = init_whatsapp_manager(db)
+
+# Configurações da Evolution API (se existirem)
+api_url = db.get_setting('evolution_api_url')
+api_key = db.get_setting('evolution_api_key')
+
+if api_url and api_key:
+    evolution_service = init_evolution_service(api_url, api_key)
+    logger.info("Evolution API configurada")
+else:
+    logger.info("Evolution API não configurada - usando modo local")
 
 logger.info("Sistema inicializado com banco de dados local")
 
@@ -440,6 +455,185 @@ def get_queue():
         
     except Exception as e:
         logger.error(f"Erro ao carregar fila: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/configure', methods=['POST'])
+def configure_whatsapp():
+    """Configura Evolution API"""
+    try:
+        data = request.get_json()
+        
+        api_url = data.get('api_url')
+        api_key = data.get('api_key')
+        instance_name = data.get('instance_name')
+        
+        if not all([api_url, api_key]):
+            return jsonify({
+                'success': False,
+                'error': 'API URL e API Key são obrigatórios'
+            }), 400
+        
+        # Salvar configurações no banco
+        db.update_setting('evolution_api_url', api_url)
+        db.update_setting('evolution_api_key', api_key)
+        if instance_name:
+            db.update_setting('whatsapp_instance', instance_name)
+        
+        # Inicializar serviço
+        evolution_service = init_evolution_service(api_url, api_key)
+        
+        # Testar conexão
+        whatsapp_mgr = get_whatsapp_manager()
+        if whatsapp_mgr:
+            result = whatsapp_mgr.test_connection()
+            return jsonify(result)
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Erro ao inicializar gerenciador WhatsApp'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Erro ao configurar WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/test', methods=['POST'])
+def test_whatsapp():
+    """Testa conexão WhatsApp"""
+    try:
+        whatsapp_mgr = get_whatsapp_manager()
+        if not whatsapp_mgr:
+            return jsonify({
+                'success': False,
+                'error': 'Gerenciador WhatsApp não inicializado'
+            }), 400
+        
+        result = whatsapp_mgr.test_connection()
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Erro ao testar WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/send-test', methods=['POST'])
+def send_test_message():
+    """Envia mensagem de teste"""
+    try:
+        data = request.get_json()
+        message = data.get('message', 'Mensagem de teste - ProScraper Pro')
+        group_id = data.get('group_id')
+        
+        if not group_id:
+            return jsonify({
+                'success': False,
+                'error': 'ID do grupo é obrigatório'
+            }), 400
+        
+        whatsapp_mgr = get_whatsapp_manager()
+        if not whatsapp_mgr:
+            return jsonify({
+                'success': False,
+                'error': 'Gerenciador WhatsApp não inicializado'
+            }), 400
+        
+        result = whatsapp_mgr.send_to_group(message, group_id)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Erro ao enviar mensagem teste: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/qrcode', methods=['GET'])
+def get_qr_code():
+    """Obtém QR Code para conexão"""
+    try:
+        whatsapp_mgr = get_whatsapp_manager()
+        if not whatsapp_mgr:
+            return jsonify({
+                'success': False,
+                'error': 'Gerenciador WhatsApp não inicializado'
+            }), 400
+        
+        qr_code = whatsapp_mgr.get_qr_code()
+        if qr_code:
+            return jsonify({
+                'success': True,
+                'qr_code': qr_code
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'QR Code não disponível'
+            }), 404
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter QR Code: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/create-instance', methods=['POST'])
+def create_whatsapp_instance():
+    """Cria nova instância WhatsApp"""
+    try:
+        data = request.get_json()
+        instance_name = data.get('instance_name', 'default')
+        
+        whatsapp_mgr = get_whatsapp_manager()
+        if not whatsapp_mgr:
+            return jsonify({
+                'success': False,
+                'error': 'Gerenciador WhatsApp não inicializado'
+            }), 400
+        
+        result = whatsapp_mgr.create_instance(instance_name)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar instância: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/whatsapp/status', methods=['GET'])
+def get_whatsapp_status():
+    """Obtém status detalhado do WhatsApp"""
+    try:
+        whatsapp_mgr = get_whatsapp_manager()
+        if not whatsapp_mgr:
+            return jsonify({
+                'success': False,
+                'error': 'Gerenciador WhatsApp não inicializado'
+            }), 400
+        
+        # Status da conexão
+        connection_status = whatsapp_mgr.test_connection()
+        
+        # Status da instância
+        instance_status = whatsapp_mgr.check_connection_status()
+        
+        return jsonify({
+            'success': True,
+            'connection': connection_status,
+            'instance': instance_status
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status WhatsApp: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
