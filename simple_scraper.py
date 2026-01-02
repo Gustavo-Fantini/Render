@@ -437,49 +437,54 @@ class SimpleScraper:
         try:
             logger.info(f"Iniciando scraping simplificado: {url}")
             
-            # Resolver URL encurtada se necessário
+            # Manter URL original para retorno
+            original_url = url
+            
+            # Resolver URL encurtada se necessário apenas para scraping
+            scrape_url = url
             if any(domain in url.lower() for domain in ['amzn.to', 's.shopee.com.br']):
-                url = self._resolve_short_url(url)
+                scrape_url = self._resolve_short_url(url)
             
             # Identificar site
             site = self._identify_site(url)
             logger.info(f"Site identificado: {site}")
             
-            # Fazer requisição
-            response = self.session.get(url, timeout=10)
+            # Fazer requisição com URL resolvida
+            response = self.session.get(scrape_url, timeout=10)
             response.raise_for_status()
             
+            # Parse HTML
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # Extrair dados baseado no site
             if site == 'amazon':
-                data = self._scrape_amazon(soup, url)
+                data = self._scrape_amazon(soup, original_url)  # Usar URL original
             elif site == 'mercadolivre':
-                data = self._scrape_mercadolivre(soup, url)
+                data = self._scrape_mercadolivre(soup, original_url)  # Usar URL original
             elif site == 'shopee':
-                data = self._scrape_shopee(soup, url)
+                data = self._scrape_shopee(soup, original_url)  # Usar URL original
             else:
-                data = {'url': url, 'title': None, 'price_current_text': None, 'image_url': None}
+                logger.warning(f"Site não suportado: {site}")
+                return {'error': f'Site não suportado: {site}'}
             
-            # Adicionar metadados
-            data['site_name'] = site
-            data['extraction_time'] = time.time()
+            # Adicionar informações adicionais
+            data['original_url'] = original_url
+            data['scrape_url'] = scrape_url
+            data['site'] = site
             
-            # Verificar sucesso
-            success = bool(data.get('title') and data.get('price_current_text'))
-            logger.info(f"Scraping {'bem-sucedido' if success else 'parcial'} - Título: {bool(data.get('title'))}, Preço: {bool(data.get('price_current_text'))}, Imagem: {bool(data.get('image_url'))}")
+            # Log do resultado
+            title_found = bool(data.get('title'))
+            price_found = bool(data.get('price_current'))
+            image_found = bool(data.get('image_url'))
+            
+            logger.info(f"Scraping concluído - Sucesso: {title_found and price_found}")
+            logger.info(f"Scraping bem-sucedido - Título: {title_found}, Preço: {price_found}, Imagem: {image_found}")
             
             return data
             
+        except requests.RequestException as e:
+            logger.error(f"Erro de requisição: {e}")
+            return {'error': f'Erro de requisição: {str(e)}'}
         except Exception as e:
             logger.error(f"Erro no scraping: {e}")
-            return {
-                'url': url,
-                'title': None,
-                'price_current_text': None,
-                'price_current': None,
-                'image_url': None,
-                'site_name': 'unknown',
-                'extraction_time': time.time(),
-                'error': str(e)
-            }
+            return {'error': f'Erro no scraping: {str(e)}'}

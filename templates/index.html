@@ -1072,6 +1072,37 @@
       }
     }
 
+    // ENVIAR PRODUTO IMEDIATAMENTE
+    async function sendProductNow(productId) {
+      if (!confirm('Tem certeza que deseja enviar este produto agora?')) {
+        return;
+      }
+
+      try {
+        showStatus('Enviando produto...', 'loading');
+        
+        const response = await fetch(`/api/products/${productId}/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showStatus('✅ Produto enviado com sucesso!', 'success');
+          loadQueue(); // Atualizar fila
+          updateStats(); // Atualizar estatísticas
+        } else {
+          showStatus(`❌ Erro: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        console.error('Erro ao enviar produto:', error);
+        showStatus('❌ Erro ao enviar produto', 'error');
+      }
+    }
+
     
 
     // DETECTAR SITE PELA URL

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import logging
+import sqlite3
 from datetime import datetime
 from database import LocalDatabase
 from simple_scraper import SimpleScraper
