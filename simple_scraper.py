@@ -156,9 +156,11 @@ class SimpleScraper:
         
         # Preço (priorizar preço com desconto)
         price_selectors = [
-            # Preço com desconto (prioridade)
+            # Preço com desconto (prioridade) - baseado no HTML real
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-fraction',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-decimal',
             '.a-price-current .a-offscreen',
             '.a-price .a-offscreen',
             '.a-price-current',
@@ -166,6 +168,8 @@ class SimpleScraper:
             '.a-price.a-text-price.a-size-medium.apexPriceToPay',
             '.a-price-whole',
             '.a-price .a-price-whole',
+            '.a-price-fraction',
+            '.a-price .a-price-fraction',
             'span.a-price.a-text-price.a-size-medium.apexPriceToPay',
             'span.a-price.a-text-price',
             'span[data-a-color="price"]',
@@ -186,6 +190,21 @@ class SimpleScraper:
                 else:
                     elem = soup.select_one(selector)
                     if elem:
+                        # Para Amazon: combinar partes inteiras e fracionadas se necessário
+                        if 'a-price-whole' in selector or 'a-price-fraction' in selector:
+                            # Tentar encontrar o container completo do preço
+                            price_container = elem.find_parent(class_='a-price')
+                            if price_container:
+                                whole = price_container.select_one('.a-price-whole')
+                                fraction = price_container.select_one('.a-price-fraction')
+                                if whole and fraction:
+                                    price_text = f"R$ {whole.get_text(strip=True)},{fraction.get_text(strip=True)}"
+                                    formatted, price_val = self._clean_price(price_text)
+                                    if formatted:
+                                        data['price_current_text'] = formatted
+                                        data['price_current'] = price_val
+                                        break
+                        
                         price_text = elem.get_text(strip=True)
                         if 'R$' in price_text or any(c.isdigit() for c in price_text):
                             formatted, price_val = self._clean_price(price_text)
@@ -261,7 +280,10 @@ class SimpleScraper:
         
         # Preço (priorizar preço com desconto)
         price_selectors = [
-            # Preço com desconto (prioridade)
+            # Preço com desconto (prioridade) - baseado no HTML real
+            '.poly-price__current .andes-money-amount__fraction',
+            '.poly-price__current .andes-money-amount',
+            '.andes-money-amount--cents-superscript .andes-money-amount__fraction',
             '.ui-pdp-price__second-line .andes-money-amount__fraction',
             '.ui-pdp-price__second-line .price-tag-fraction',
             '.ui-pdp-price__current .andes-money-amount__fraction',
