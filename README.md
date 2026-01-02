@@ -59,28 +59,7 @@ O ProScraper Pro é uma aplicação web completa para extração de dados de e-c
 - Docker
 - Git
 
-### **Passos**
 
-1. **Clone o repositório**
-   ```bash
-   git clone https://github.com/Gustavo-Fantini/Render.git
-   cd Render
-   ```
-
-2. **Instale dependências**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Inicie a aplicação**
-   ```bash
-   python app.py
-   ```
-
-4. **Acesse o sistema**
-   - URL: `http://localhost:5000`
-   - Login: `gustavofantini`
-   - Senha: `Gustavinho12`
 
 ## 🔧 **Configuração**
 
