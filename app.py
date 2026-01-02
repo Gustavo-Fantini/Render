@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Inicializar banco de dados e scheduler
+# Inicializar banco de dados, scheduler e scraper
 db = LocalDatabase()
 scheduler = ScheduledSender(db)
+scraper = SimpleScraper()
 
 # Iniciar scheduler automaticamente
 try:
