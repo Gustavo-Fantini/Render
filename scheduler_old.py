@@ -6,15 +6,15 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import requests
 import json
-from database import LocalDatabase
+from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
 
 class WhatsAppSender:
-    """Sistema de envio automático de mensagens via Evolution API com nova estrutura"""
+    """Sistema de envio automático de mensagens via WhatsApp Evolution API"""
     
-    def __init__(self, db: LocalDatabase):
-        self.db = db
+    def __init__(self, supabase_client: Client):
+        self.supabase = supabase_client
         self.evolution_api_url = None
         self.evolution_api_key = None
         self.instance_name = None
@@ -39,6 +39,7 @@ class WhatsAppSender:
                 'Content-Type': 'application/json'
             }
             
+            # Verificar status da instância
             response = requests.get(
                 f"{self.evolution_api_url}/instance/{self.instance_name}",
                 headers=headers,
@@ -92,28 +93,42 @@ class WhatsAppSender:
             return False
     
     def format_promotion_message(self, product: Dict) -> str:
-        """Formata mensagem de promoção com novo padrão"""
+        """Formata mensagem de promoção"""
         title = product.get('title', 'Produto sem título')
-        price_text = product.get('price_current_text', 'Preço não disponível')
+        price_current = product.get('price_current_text', 'Preço não disponível')
+        price_original = product.get('price_original_text', '')
         url = product.get('url', '')
-        seller_text = self.db.get_setting('seller_text', 'Vendido e entregue por Amazon')
-        group_link = self.db.get_setting('group_link', 'https://linktr.ee/Free_Island')
         
-        # Formatar mensagem com nova estrutura
-        message = f"➡️ {title}\n"
-        message += f"{seller_text}\n\n"
-        message += f"✅ Por {price_text}\n"
-        message += f"🛒 {url}\n\n"
-        message += f"☑️ Link do grupo: {group_link}"
+        message = f"🔥 *OFERTA IMPERDÍVEL*\n\n"
+        message += f"📦 {title}\n\n"
+        
+        if price_original and price_original != price_current:
+            message += f"💰 De: {price_original}\n"
+            message += f"💎 Por: {price_current}\n"
+            
+            # Calcular desconto
+            try:
+                current_num = float(price_current.replace('R$', '').replace('.', '').replace(',', '.'))
+                original_num = float(price_original.replace('R$', '').replace('.', '').replace(',', '.'))
+                if original_num > 0:
+                    discount = ((original_num - current_num) / original_num) * 100
+                    message += f"🎯 Desconto: {discount:.0f}% OFF\n"
+            except:
+                pass
+        else:
+            message += f"💰 Preço: {price_current}\n"
+        
+        message += f"\n🔗 {url}\n\n"
+        message += "⚡ Aproveite agora!"
         
         return message
 
 class ScheduledSender:
-    """Sistema de agendamento de envios automáticos com banco local"""
+    """Sistema de agendamento de envios automáticos"""
     
-    def __init__(self, db: LocalDatabase):
-        self.db = db
-        self.whatsapp_sender = WhatsAppSender(db)
+    def __init__(self, supabase_client: Client):
+        self.supabase = supabase_client
+        self.whatsapp_sender = WhatsAppSender(supabase_client)
         self.running = False
         self.scheduler_thread = None
         
@@ -152,7 +167,7 @@ class ScheduledSender:
             logger.info("Iniciando ciclo de envio automático")
             
             # Buscar produtos pendentes de envio
-            pending_products = self.db.get_pending_products()
+            pending_products = self._get_pending_products()
             
             if not pending_products:
                 logger.info("Nenhum produto pendente de envio")
@@ -161,7 +176,7 @@ class ScheduledSender:
             logger.info(f"Encontrados {len(pending_products)} produtos para envio")
             
             # Buscar contatos para envio
-            contacts = self.db.get_active_contacts()
+            contacts = self._get_active_contacts()
             
             if not contacts:
                 logger.warning("Nenhum contato ativo encontrado")
@@ -179,30 +194,57 @@ class ScheduledSender:
                     
                     message = self.whatsapp_sender.format_promotion_message(product)
                     
-                    success = self.whatsapp_sender.send_message(phone, message)
-                    
-                    # Registrar tentativa
-                    self.db.log_send_attempt(
-                        product['id'], 
-                        contact['id'], 
-                        success,
-                        None if success else "Falha no envio"
-                    )
-                    
-                    if success:
+                    if self.whatsapp_sender.send_message(phone, message):
                         sent_count += 1
                         product_sent = True
                         time.sleep(2)  # Delay entre mensagens
                 
                 # Marcar produto como enviado
                 if product_sent:
-                    self.db.mark_product_as_sent(product['id'])
+                    self._mark_product_as_sent(product['id'])
                     logger.info(f"Produto {product['id']} marcado como enviado")
             
             logger.info(f"Ciclo finalizado - {sent_count} mensagens enviadas")
             
         except Exception as e:
             logger.error(f"Erro no ciclo de envio: {e}")
+    
+    def _get_pending_products(self) -> List[Dict]:
+        """Busca produtos pendentes de envio"""
+        try:
+            # Verificar produtos que não foram enviados nas últimas 24h
+            twenty_four_hours_ago = datetime.now() - timedelta(hours=24)
+            
+            response = self.supabase.table('products').select('*').eq('active', True).or_(
+                f"sent.is.null,sent.lt.{twenty_four_hours_ago.isoformat()}"
+            ).order('created_at', desc=True).limit(10).execute()
+            
+            return response.data or []
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar produtos pendentes: {e}")
+            return []
+    
+    def _get_active_contacts(self) -> List[Dict]:
+        """Busca contatos ativos para envio"""
+        try:
+            response = self.supabase.table('contacts').select('*').eq('active', True).execute()
+            return response.data or []
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar contatos: {e}")
+            return []
+    
+    def _mark_product_as_sent(self, product_id: str):
+        """Marca produto como enviado"""
+        try:
+            self.supabase.table('products').update({
+                'sent': datetime.now().isoformat(),
+                'enviado': True
+            }).eq('id', product_id).execute()
+            
+        except Exception as e:
+            logger.error(f"Erro ao marcar produto como enviado: {e}")
     
     def configure_whatsapp(self, api_url: str, api_key: str, instance_name: str):
         """Configura WhatsApp para envios"""
@@ -223,21 +265,4 @@ class ScheduledSender:
             'whatsapp_connected': self.whatsapp_sender.connected,
             'next_run': schedule.next_run() if schedule.jobs else None,
             'jobs_count': len(schedule.jobs)
-        }
-    
-    def update_seller_text(self, seller_text: str):
-        """Atualiza o texto do vendedor"""
-        self.db.update_setting('seller_text', seller_text)
-        logger.info(f"Texto do vendedor atualizado: {seller_text}")
-    
-    def update_group_link(self, group_link: str):
-        """Atualiza o link do grupo"""
-        self.db.update_setting('group_link', group_link)
-        logger.info(f"Link do grupo atualizado: {group_link}")
-    
-    def get_settings(self) -> Dict:
-        """Retorna configurações atuais"""
-        return {
-            'seller_text': self.db.get_setting('seller_text', 'Vendido e entregue por Amazon'),
-            'group_link': self.db.get_setting('group_link', 'https://linktr.ee/Free_Island')
         }

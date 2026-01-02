@@ -1,0 +1,438 @@
+import requests
+import re
+import json
+import time
+import logging
+from urllib.parse import urljoin, urlparse
+from typing import Dict, Optional, Tuple
+from datetime import datetime
+from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
+
+class SimpleScraper:
+    """Scraper simplificado para extrair apenas título, preço e imagem"""
+    
+    def __init__(self):
+        self.session = self._create_session()
+    
+    def _create_session(self) -> requests.Session:
+        """Cria sessão HTTP robusta"""
+        session = requests.Session()
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        session.headers.update(headers)
+        session.timeout = 10
+        
+        return session
+    
+    def _identify_site(self, url: str) -> str:
+        """Identifica o site pela URL"""
+        domain = urlparse(url).netloc.lower()
+        
+        if any(d in domain for d in ['mercadolivre.com', 'mercadolivre.com.br', 'ml.com.br', 'ml.com']):
+            return 'mercadolivre'
+        elif any(d in domain for d in ['amazon.com.br', 'amzn.to']):
+            return 'amazon'
+        elif any(d in domain for d in ['shopee.com.br', 's.shopee.com.br']):
+            return 'shopee'
+        
+        return 'unknown'
+    
+    def _clean_price(self, text: str) -> Tuple[Optional[str], Optional[float]]:
+        """Limpa e formata preço"""
+        if not text:
+            return None, None
+        
+        original = text.strip()
+        logger.info(f"Processando preço: '{original}'")
+        
+        # Limpar caracteres não numéricos
+        clean = re.sub(r'[^\d.,]', '', text)
+        
+        if not clean:
+            return original, None
+        
+        try:
+            # Lógica para preços brasileiros
+            if ',' in clean and '.' in clean:
+                # Determinar separador decimal
+                last_comma = clean.rfind(',')
+                last_dot = clean.rfind('.')
+                
+                if last_comma > last_dot:
+                    # Formato brasileiro: 1.234,89
+                    clean = clean.replace('.', '').replace(',', '.')
+                else:
+                    # Formato americano: 1,234.89
+                    clean = clean.replace(',', '')
+            elif '.' in clean:
+                # Verificar se é separador de milhares ou decimal
+                parts = clean.split('.')
+                if len(parts) == 2 and len(parts[1]) == 3:
+                    # É separador de milhares: 1.099 -> 1099
+                    clean = clean.replace('.', '')
+                # Se tem múltiplos pontos, tratar como separadores de milhares
+                elif len(parts) > 2:
+                    clean = clean.replace('.', '')
+            elif ',' in clean:
+                # Verificar se é separador decimal ou de milhares
+                parts = clean.split(',')
+                if len(parts) == 2 and len(parts[1]) <= 2:
+                    # É separador decimal: 1234,56
+                    clean = clean.replace(',', '.')
+                else:
+                    # É separador de milhares: 1,234 ou 1,234,567
+                    clean = clean.replace(',', '')
+            
+            # Converter para float
+            price_float = float(clean)
+            
+            # Formatar no padrão brasileiro
+            if price_float >= 1000:
+                formatted = f"R$ {price_float:,.2f}".replace(',', 'TEMP').replace('.', ',').replace('TEMP', '.')
+            else:
+                formatted = f"R$ {price_float:.2f}".replace('.', ',')
+            
+            logger.info(f"Preço processado: {original} -> {formatted}")
+            return formatted, price_float
+            
+        except ValueError:
+            logger.warning(f"Não foi possível converter o preço '{original}'")
+            return original, None
+    
+    def _resolve_short_url(self, url: str) -> str:
+        """Resolve URLs encurtadas"""
+        try:
+            logger.info(f"Resolvendo URL: {url}")
+            response = self.session.head(url, allow_redirects=True, timeout=10)
+            final_url = response.url
+            logger.info(f"URL resolvida: {final_url}")
+            return final_url
+        except Exception as e:
+            logger.warning(f"Erro ao resolver URL: {e}")
+            return url
+    
+    def _scrape_amazon(self, soup: BeautifulSoup, url: str) -> Dict:
+        """Extrai dados da Amazon (simplificado)"""
+        data = {'url': url}
+        
+        # Título
+        title_selectors = [
+            '#productTitle',
+            '.product-title',
+            'h1.a-size-large',
+            'meta[property="og:title"]'
+        ]
+        
+        for selector in title_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:title')
+                    if elem and elem.get('content'):
+                        data['title'] = elem.get('content').strip()
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        title = elem.get_text(strip=True)
+                        if title and len(title) > 5:
+                            data['title'] = title
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de título '{selector}': {e}")
+                continue
+        
+        # Preço
+        price_selectors = [
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            '.a-price-current .a-offscreen',
+            '.a-price .a-offscreen',
+            'meta[property="product:price:amount"]'
+        ]
+        
+        for selector in price_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='product:price:amount')
+                    if elem and elem.get('content'):
+                        price_text = f"R$ {elem.get('content')}"
+                        formatted, price_val = self._clean_price(price_text)
+                        if formatted:
+                            data['price_current_text'] = formatted
+                            data['price_current'] = price_val
+                            break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        price_text = elem.get_text(strip=True)
+                        if 'R$' in price_text or any(c.isdigit() for c in price_text):
+                            formatted, price_val = self._clean_price(price_text)
+                            if formatted:
+                                data['price_current_text'] = formatted
+                                data['price_current'] = price_val
+                                break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de preço '{selector}': {e}")
+                continue
+        
+        # Imagem
+        image_selectors = [
+            '#landingImage',
+            '.a-dynamic-image',
+            'img[data-testid="product-image"]',
+            'meta[property="og:image"]'
+        ]
+        
+        for selector in image_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:image')
+                    if elem and elem.get('content'):
+                        data['image_url'] = elem.get('content')
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        img_src = elem.get('src') or elem.get('data-src')
+                        if img_src and 'http' in img_src:
+                            data['image_url'] = img_src
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de imagem '{selector}': {e}")
+                continue
+        
+        return data
+    
+    def _scrape_mercadolivre(self, soup: BeautifulSoup, url: str) -> Dict:
+        """Extrai dados do Mercado Livre (simplificado)"""
+        data = {'url': url}
+        
+        # Título
+        title_selectors = [
+            '.ui-pdp-title',
+            'h1.ui-pdp-title',
+            '.ui-item__title',
+            'meta[property="og:title"]'
+        ]
+        
+        for selector in title_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:title')
+                    if elem and elem.get('content'):
+                        data['title'] = elem.get('content').strip()
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        title = elem.get_text(strip=True)
+                        if title and len(title) > 5:
+                            data['title'] = title
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de título '{selector}': {e}")
+                continue
+        
+        # Preço
+        price_selectors = [
+            '.andes-money-amount__fraction',
+            '.price-tag-fraction',
+            '.ui-pdp-price__second-line .andes-money-amount__fraction',
+            '.ui-item__price .price-tag-fraction'
+        ]
+        
+        for selector in price_selectors:
+            try:
+                elem = soup.select_one(selector)
+                if elem:
+                    price_text = elem.get_text(strip=True)
+                    if price_text.isdigit() or ',' in price_text:
+                        # Tentar obter os centavos
+                        cents_selector = selector.replace('fraction', 'cents')
+                        cents_elem = soup.select_one(cents_selector)
+                        if cents_elem:
+                            cents_text = cents_elem.get_text(strip=True)
+                            full_price = f"{price_text},{cents_text}"
+                        else:
+                            full_price = price_text
+                        
+                        formatted, price_val = self._clean_price(f"R$ {full_price}")
+                        if formatted:
+                            data['price_current_text'] = formatted
+                            data['price_current'] = price_val
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de preço '{selector}': {e}")
+                continue
+        
+        # Imagem
+        image_selectors = [
+            '.ui-pdp-gallery__figure__image',
+            '.ui-pdp-gallery img',
+            '.gallery-image-container img',
+            'meta[property="og:image"]'
+        ]
+        
+        for selector in image_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:image')
+                    if elem and elem.get('content'):
+                        data['image_url'] = elem.get('content')
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        img_src = elem.get('src') or elem.get('data-src')
+                        if img_src and 'http' in img_src:
+                            data['image_url'] = img_src
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de imagem '{selector}': {e}")
+                continue
+        
+        return data
+    
+    def _scrape_shopee(self, soup: BeautifulSoup, url: str) -> Dict:
+        """Extrai dados do Shopee (simplificado)"""
+        data = {'url': url}
+        
+        # Título
+        title_selectors = [
+            'span[data-testid="pdp-product-title"]',
+            '.product-briefing__title',
+            'h1',
+            'meta[property="og:title"]'
+        ]
+        
+        for selector in title_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:title')
+                    if elem and elem.get('content'):
+                        data['title'] = elem.get('content').strip()
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        title = elem.get_text(strip=True)
+                        if title and len(title) > 5:
+                            data['title'] = title
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de título '{selector}': {e}")
+                continue
+        
+        # Preço
+        price_selectors = [
+            'span[data-testid="pdp-price"]',
+            '.current-price',
+            '.product-briefing__price',
+            '[class*="price"]'
+        ]
+        
+        for selector in price_selectors:
+            try:
+                elem = soup.select_one(selector)
+                if elem:
+                    price_text = elem.get_text(strip=True)
+                    if 'R$' in price_text or any(c.isdigit() for c in price_text):
+                        formatted, price_val = self._clean_price(price_text)
+                        if formatted:
+                            data['price_current_text'] = formatted
+                            data['price_current'] = price_val
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de preço '{selector}': {e}")
+                continue
+        
+        # Imagem
+        image_selectors = [
+            'img[data-testid="pdp-product-image"]',
+            '.product-briefing__image',
+            'img[src*="susercontent"]',
+            'meta[property="og:image"]'
+        ]
+        
+        for selector in image_selectors:
+            try:
+                if selector.startswith('meta'):
+                    elem = soup.find('meta', property='og:image')
+                    if elem and elem.get('content'):
+                        data['image_url'] = elem.get('content')
+                        break
+                else:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        img_src = elem.get('src') or elem.get('data-src')
+                        if img_src and 'http' in img_src:
+                            data['image_url'] = img_src
+                            break
+            except Exception as e:
+                logger.debug(f"Erro no seletor de imagem '{selector}': {e}")
+                continue
+        
+        return data
+    
+    def scrape_product(self, url: str) -> Dict:
+        """Função principal de scraping simplificado"""
+        try:
+            logger.info(f"Iniciando scraping simplificado: {url}")
+            
+            # Resolver URL encurtada se necessário
+            if any(domain in url.lower() for domain in ['amzn.to', 's.shopee.com.br']):
+                url = self._resolve_short_url(url)
+            
+            # Identificar site
+            site = self._identify_site(url)
+            logger.info(f"Site identificado: {site}")
+            
+            # Fazer requisição
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Extrair dados baseado no site
+            if site == 'amazon':
+                data = self._scrape_amazon(soup, url)
+            elif site == 'mercadolivre':
+                data = self._scrape_mercadolivre(soup, url)
+            elif site == 'shopee':
+                data = self._scrape_shopee(soup, url)
+            else:
+                data = {'url': url, 'title': None, 'price_current_text': None, 'image_url': None}
+            
+            # Adicionar metadados
+            data['site_name'] = site
+            data['extraction_time'] = time.time()
+            
+            # Verificar sucesso
+            success = bool(data.get('title') and data.get('price_current_text'))
+            logger.info(f"Scraping {'bem-sucedido' if success else 'parcial'} - Título: {bool(data.get('title'))}, Preço: {bool(data.get('price_current_text'))}, Imagem: {bool(data.get('image_url'))}")
+            
+            return data
+            
+        except Exception as e:
+            logger.error(f"Erro no scraping: {e}")
+            return {
+                'url': url,
+                'title': None,
+                'price_current_text': None,
+                'price_current': None,
+                'image_url': None,
+                'site_name': 'unknown',
+                'extraction_time': time.time(),
+                'error': str(e)
+            }

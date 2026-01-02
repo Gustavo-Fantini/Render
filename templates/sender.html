@@ -121,6 +121,39 @@
                 </div>
             </div>
 
+            <!-- Message Configuration -->
+            <div class="bg-white rounded-xl p-6 card-shadow">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-cog mr-2 text-purple-600"></i>Configuração de Mensagem
+                </h2>
+                
+                <form id="message-config" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Texto do Vendedor</label>
+                        <textarea id="seller-text" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Vendido e entregue por Amazon"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Texto que aparece abaixo do título do produto</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Link do Grupo</label>
+                        <input type="url" id="group-link" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="https://linktr.ee/Free_Island">
+                        <p class="text-xs text-gray-500 mt-1">Link que aparecerá no final da mensagem</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-save mr-2"></i>Salvar Configurações
+                    </button>
+                </form>
+                
+                <div id="message-config-result" class="mt-4 text-center text-sm"></div>
+                
+                <!-- Message Preview -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Preview da Mensagem:</h3>
+                    <div id="message-preview" class="text-sm text-gray-600 whitespace-pre-line"></div>
+                </div>
+            </div>
+
             <!-- WhatsApp Configuration -->
             <div class="bg-white rounded-xl p-6 card-shadow">
                 <h2 class="text-xl font-bold mb-4 text-gray-800">
@@ -224,6 +257,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             refreshStatus();
             loadContacts();
+            loadSettings();
             
             // Auto refresh every 30 seconds
             setInterval(refreshStatus, 30000);
@@ -235,6 +269,11 @@
             configureWhatsApp();
         });
 
+        document.getElementById('message-config').addEventListener('submit', function(e) {
+            e.preventDefault();
+            configureMessage();
+        });
+
         document.getElementById('test-message').addEventListener('submit', function(e) {
             e.preventDefault();
             sendTestMessage();
@@ -244,6 +283,10 @@
             e.preventDefault();
             addContact();
         });
+
+        // Auto update preview
+        document.getElementById('seller-text').addEventListener('input', updateMessagePreview);
+        document.getElementById('group-link').addEventListener('input', updateMessagePreview);
 
         // API Functions
         async function refreshStatus() {
@@ -431,6 +474,64 @@
                 }
             } catch (error) {
                 console.error('Error loading contacts:', error);
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/sender/settings');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('seller-text').value = data.settings.seller_text || '';
+                    document.getElementById('group-link').value = data.settings.group_link || '';
+                    updateMessagePreview();
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        function updateMessagePreview() {
+            const sellerText = document.getElementById('seller-text').value || 'Vendido e entregue por Amazon';
+            const groupLink = document.getElementById('group-link').value || 'https://linktr.ee/Free_Island';
+            
+            const preview = `➡️ Headset Gamer Redragon Zeus Lite Preto P3 H510-LT
+${sellerText}
+
+✅ Por R$ 160,34
+🛒 https://www.amazon.com.br/dp/B0F1C3MRMF?tag=techdealsbr07-20
+
+☑️ Link do grupo: ${groupLink}`;
+            
+            document.getElementById('message-preview').textContent = preview;
+        }
+
+        async function configureMessage() {
+            const sellerText = document.getElementById('seller-text').value;
+            const groupLink = document.getElementById('group-link').value;
+            
+            try {
+                const response = await fetch('/api/sender/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        seller_text: sellerText,
+                        group_link: groupLink
+                    })
+                });
+                
+                const data = await response.json();
+                
+                const resultEl = document.getElementById('message-config-result');
+                if (data.success) {
+                    resultEl.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>' + data.message + '</span>';
+                    updateMessagePreview();
+                } else {
+                    resultEl.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>' + data.error + '</span>';
+                }
+            } catch (error) {
+                document.getElementById('message-config-result').innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>Erro ao salvar configurações</span>';
             }
         }
 
