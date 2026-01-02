@@ -900,32 +900,172 @@
           queueContainer.style.display = 'block';
           queueList.innerHTML = '';
           
-          data.queue.slice(0, 5).forEach(item => {
+          data.queue.forEach(item => {
             const queueItem = document.createElement('div');
             queueItem.className = 'message-container';
             queueItem.style.marginBottom = '1rem';
             queueItem.innerHTML = `
-              <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <strong style="color: var(--accent-primary);">${item.title}</strong>
                 <span style="font-size: 0.8rem; color: var(--text-secondary);">${new Date(item.created_at).toLocaleString('pt-BR')}</span>
               </div>
               <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
                 ${item.message.substring(0, 100)}${item.message.length > 100 ? '...' : ''}
               </div>
-              <div style="display: flex; gap: 0.5rem;">
-                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
-                  ${item.status || 'pendente'}
-                </span>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">
-                  📊 ${item.sent_count || 0} envios
-                </span>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 0.5rem;">
+                  <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
+                    ${item.status || 'pendente'}
+                  </span>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                    📊 ${item.sent_count || 0} envios
+                  </span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button onclick="editQueueItem(${item.id})" class="btn-small btn-edit" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                    ✏️ Editar
+                  </button>
+                  <button onclick="deleteQueueItem(${item.id})" class="btn-small" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--accent-secondary); color: white;">
+                    🗑️ Excluir
+                  </button>
+                </div>
               </div>
             `;
             queueList.appendChild(queueItem);
           });
+        } else {
+          const queueContainer = document.getElementById('queueContainer');
+          queueContainer.style.display = 'none';
         }
       } catch (error) {
         console.error('Erro ao carregar fila:', error);
+      }
+    }
+
+    // Editar item da fila
+    async function editQueueItem(itemId) {
+      try {
+        const response = await fetch(`/api/products/${itemId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const product = data.product;
+          
+          // Criar modal de edição
+          const modal = document.createElement('div');
+          modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+          `;
+          
+          modal.innerHTML = `
+            <div style="background: var(--bg-primary); padding: 2rem; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+              <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">✏️ Editar Produto</h3>
+              
+              <div class="form-group">
+                <label>Título</label>
+                <input type="text" id="edit-title" value="${product.title || ''}" style="width: 100%; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+              </div>
+              
+              <div class="form-group">
+                <label>Preço</label>
+                <input type="text" id="edit-price" value="${product.price_current_text || ''}" style="width: 100%; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+              </div>
+              
+              <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="edit-url" value="${product.url || ''}" style="width: 100%; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+              </div>
+              
+              <div class="form-group">
+                <label>URL da Imagem</label>
+                <input type="url" id="edit-image" value="${product.image_url || ''}" style="width: 100%; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+              </div>
+              
+              <div class="form-group">
+                <label>Mensagem</label>
+                <textarea id="edit-message" rows="6" style="width: 100%; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); resize: vertical;">${product.message || ''}</textarea>
+              </div>
+              
+              <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button onclick="saveQueueItem(${itemId})" class="btn-small btn-save">💾 Salvar</button>
+                <button onclick="closeEditModal()" class="btn-small" style="background: var(--bg-tertiary);">Cancelar</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+        }
+      } catch (error) {
+        showNotification('Erro ao carregar produto para edição', 'error');
+      }
+    }
+
+    // Salvar item editado
+    async function saveQueueItem(itemId) {
+      try {
+        const title = document.getElementById('edit-title').value;
+        const price = document.getElementById('edit-price').value;
+        const url = document.getElementById('edit-url').value;
+        const image = document.getElementById('edit-image').value;
+        const message = document.getElementById('edit-message').value;
+        
+        const response = await fetch(`/api/products/${itemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title,
+            price_current_text: price,
+            url: url,
+            image_url: image,
+            message: message
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification('Produto atualizado com sucesso!', 'success');
+          closeEditModal();
+          loadQueue(); // Recarregar fila
+        } else {
+          showNotification('Erro ao atualizar produto', 'error');
+        }
+      } catch (error) {
+        showNotification('Erro ao salvar produto', 'error');
+      }
+    }
+
+    // Excluir item da fila
+    async function deleteQueueItem(itemId) {
+      if (!confirm('Tem certeza que deseja excluir este produto?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/products/${itemId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showNotification('Produto excluído com sucesso!', 'success');
+          loadQueue(); // Recarregar fila
+        } else {
+          showNotification('Erro ao excluir produto', 'error');
+        }
+      } catch (error) {
+        showNotification('Erro ao excluir produto', 'error');
+      }
+    }
+
+    // Fechar modal de edição
+    function closeEditModal() {
+      const modal = document.querySelector('div[style*="position: fixed"]');
+      if (modal) {
+        modal.remove();
       }
     }
 

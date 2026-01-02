@@ -20,11 +20,18 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Inicializar banco de dados local
+# Inicializar banco de dados e scheduler
 db = LocalDatabase()
-scraper = SimpleScraper()
 scheduler = ScheduledSender(db)
 
+# Iniciar scheduler automaticamente
+try:
+    scheduler.start_scheduler()
+    logger.info("Scheduler iniciado automaticamente na inicialização")
+except Exception as e:
+    logger.error(f"Erro ao iniciar scheduler: {e}")
+
+# Inicializar sistema
 logger.info("Sistema inicializado com banco de dados local")
 
 @app.route('/')
@@ -446,6 +453,115 @@ def get_queue():
         
     except Exception as e:
         logger.error(f"Erro ao carregar fila: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/products/<int:product_id>', methods=['GET'])
+def get_product(product_id):
+    """Retorna dados de um produto específico"""
+    try:
+        with sqlite3.connect('proscraper.db') as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+            product = cursor.fetchone()
+            
+            if product:
+                return jsonify({
+                    'success': True,
+                    'product': dict(product)
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Produto não encontrado'
+                }), 404
+                
+    except Exception as e:
+        logger.error(f"Erro ao buscar produto {product_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Atualiza dados de um produto"""
+    try:
+        data = request.get_json()
+        
+        with sqlite3.connect('proscraper.db') as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE products SET 
+                    title = ?, 
+                    price_current_text = ?, 
+                    url = ?, 
+                    image_url = ?, 
+                    message = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (
+                data.get('title'),
+                data.get('price_current_text'),
+                data.get('url'),
+                data.get('image_url'),
+                data.get('message'),
+                product_id
+            ))
+            
+            if cursor.rowcount > 0:
+                conn.commit()
+                logger.info(f"Produto {product_id} atualizado")
+                return jsonify({
+                    'success': True,
+                    'message': 'Produto atualizado com sucesso'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Produto não encontrado'
+                }), 404
+                
+    except Exception as e:
+        logger.error(f"Erro ao atualizar produto {product_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Exclui um produto"""
+    try:
+        with sqlite3.connect('proscraper.db') as conn:
+            cursor = conn.cursor()
+            
+            # Excluir logs relacionados primeiro
+            cursor.execute('DELETE FROM send_logs WHERE product_id = ?', (product_id,))
+            
+            # Excluir o produto
+            cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
+            
+            if cursor.rowcount > 0:
+                conn.commit()
+                logger.info(f"Produto {product_id} excluído")
+                return jsonify({
+                    'success': True,
+                    'message': 'Produto excluído com sucesso'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Produto não encontrado'
+                }), 404
+                
+    except Exception as e:
+        logger.error(f"Erro ao excluir produto {product_id}: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
