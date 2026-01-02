@@ -152,12 +152,16 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço
+        # Preço (priorizar preço com desconto)
         price_selectors = [
+            # Preço com desconto (prioridade)
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay .a-price-whole',
             '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
             '.a-price-current .a-offscreen',
             '.a-price .a-offscreen',
+            # Preço padrão (fallback)
+            '.a-price-whole',
+            '.a-price .a-price-whole',
             'meta[property="product:price:amount"]'
         ]
         
@@ -244,11 +248,17 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço
+        # Preço (priorizar preço com desconto)
         price_selectors = [
+            # Preço com desconto (prioridade)
+            '.ui-pdp-price__second-line .andes-money-amount__fraction',
+            '.ui-pdp-price__second-line .price-tag-fraction',
+            '.ui-pdp-price__current .andes-money-amount__fraction',
+            '.ui-pdp-price__current .price-tag-fraction',
+            '.andes-money-amount-combo__main .andes-money-amount__fraction',
+            # Preço padrão (fallback)
             '.andes-money-amount__fraction',
             '.price-tag-fraction',
-            '.ui-pdp-price__second-line .andes-money-amount__fraction',
             '.ui-item__price .price-tag-fraction'
         ]
         
@@ -334,10 +344,15 @@ class SimpleScraper:
                 logger.debug(f"Erro no seletor de título '{selector}': {e}")
                 continue
         
-        # Preço
+        # Preço (priorizar preço com desconto)
         price_selectors = [
+            # Preço com desconto (prioridade)
             'span[data-testid="pdp-price"]',
             '.current-price',
+            '.product-briefing__price .current-price',
+            '.price-with-discount',
+            '[class*="current-price"]',
+            # Preço padrão (fallback)
             '.product-briefing__price',
             '[class*="price"]'
         ]
