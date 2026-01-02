@@ -57,8 +57,8 @@ def index():
 
 @app.route('/sender')
 def sender_page():
-    """Página de gerenciamento do sistema de envios"""
-    return render_template('sender.html')
+    """Página de gerenciamento simplificada do sistema de envios"""
+    return render_template('sender_simple.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze_url():
@@ -365,6 +365,81 @@ def list_products():
         
     except Exception as e:
         logger.error(f"Erro ao listar produtos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/save-product', methods=['POST'])
+def save_product():
+    """Salva produto com mensagem no banco local"""
+    try:
+        data = request.get_json()
+        
+        title = data.get('title')
+        url = data.get('url')
+        image_url = data.get('image_url')
+        message = data.get('message')
+        
+        if not all([title, url, message]):
+            return jsonify({
+                'success': False,
+                'error': 'Título, URL e mensagem são obrigatórios'
+            }), 400
+        
+        # Salvar no banco local
+        product_data = {
+            'title': title,
+            'url': url,
+            'image_url': image_url,
+            'message': message
+        }
+        
+        product_id = db.save_product(product_data)
+        
+        logger.info(f"Produto salvo: {title}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Produto salvo com sucesso',
+            'product_id': product_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao salvar produto: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/queue', methods=['GET'])
+def get_queue():
+    """Retorna fila de produtos pendentes"""
+    try:
+        # Buscar produtos não enviados recentemente
+        pending_products = db.get_pending_products(limit=10)
+        
+        # Formatar para resposta
+        queue = []
+        for product in pending_products:
+            queue.append({
+                'id': product['id'],
+                'title': product['title'],
+                'url': product['url'],
+                'image_url': product['image_url'],
+                'message': f"➡️ {product['title']}\nVendido e entregue por Amazon\n\n✅ Por {product['price_current_text']}\n🛒 {product['url']}\n\n☑️ Link do grupo: https://linktr.ee/Free_Island",
+                'status': 'pendente',
+                'sent_count': 0,
+                'created_at': product['created_at']
+            })
+        
+        return jsonify({
+            'success': True,
+            'queue': queue
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao carregar fila: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

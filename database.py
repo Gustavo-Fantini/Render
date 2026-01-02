@@ -29,6 +29,7 @@ class LocalDatabase:
                         price_current_text TEXT,
                         image_url TEXT,
                         seller_text TEXT,
+                        message TEXT,
                         active BOOLEAN DEFAULT 1,
                         sent_at TIMESTAMP,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -118,6 +119,7 @@ class LocalDatabase:
                             price_current = ?, 
                             price_current_text = ?, 
                             image_url = ?, 
+                            message = ?,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE url = ?
                     ''', (
@@ -125,20 +127,22 @@ class LocalDatabase:
                         product_data.get('price_current'),
                         product_data.get('price_current_text'),
                         product_data.get('image_url'),
+                        product_data.get('message'),
                         product_data['url']
                     ))
                     product_id = existing[0]
                 else:
                     # Inserir novo produto
                     cursor.execute('''
-                        INSERT INTO products (url, title, price_current, price_current_text, image_url)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO products (url, title, price_current, price_current_text, image_url, message)
+                        VALUES (?, ?, ?, ?, ?, ?)
                     ''', (
                         product_data['url'],
                         product_data.get('title'),
                         product_data.get('price_current'),
                         product_data.get('price_current_text'),
-                        product_data.get('image_url')
+                        product_data.get('image_url'),
+                        product_data.get('message')
                     ))
                     product_id = cursor.lastrowid
                 

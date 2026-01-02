@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Envios - ProScraper Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .card-shadow {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .status-online {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    .status-offline {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <h1 class="text-xl font-bold text-gray-900">ProScraper Pro</h1>
+          <span class="ml-2 text-sm text-gray-500">Sistema de Envios</span>
+        </div>
+        <nav class="flex space-x-4">
+          <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-home mr-1"></i>Extração
+          </a>
+          <a href="/sender" class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-paper-plane mr-1"></i>Envios
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="px-4 py-6 sm:px-0">
+      
+      <!-- Status Card -->
+      <div class="bg-white rounded-lg card-shadow p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+          <i class="fas fa-heartbeat mr-2 text-green-600"></i>Status da Aplicação
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="text-center">
+            <div id="scheduler-status" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2">
+              <i class="fas fa-clock"></i>
+            </div>
+            <p class="text-sm font-medium text-gray-900">Scheduler</p>
+            <p id="scheduler-text" class="text-xs text-gray-500">Verificando...</p>
+          </div>
+          
+          <div class="text-center">
+            <div id="whatsapp-status" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2">
+              <i class="fas fa-whatsapp"></i>
+            </div>
+            <p class="text-sm font-medium text-gray-900">WhatsApp</p>
+            <p id="whatsapp-text" class="text-xs text-gray-500">Verificando...</p>
+          </div>
+          
+          <div class="text-center">
+            <div id="database-status" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-online">
+              <i class="fas fa-database"></i>
+            </div>
+            <p class="text-sm font-medium text-gray-900">Banco Local</p>
+            <p class="text-xs text-gray-500">SQLite Online</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuration Card -->
+      <div class="bg-white rounded-lg card-shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+          <i class="fas fa-cog mr-2 text-blue-600"></i>Configuração Evolution API
+        </h2>
+        
+        <form id="whatsapp-config" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">URL da API Evolution</label>
+            <input type="url" id="api-url" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="https://api.evolution.com" required>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+            <input type="text" id="api-key" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Sua API Key" required>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Instância</label>
+            <input type="text" id="instance-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="minha-instancia" required>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">ID do Grupo</label>
+            <input type="text" id="group-id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="123456789-123456@g.us">
+          </div>
+          
+          <div class="flex space-x-3">
+            <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+              <i class="fas fa-save mr-2"></i>Salvar Config
+            </button>
+            <button type="button" onclick="testConnection()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+              <i class="fas fa-plug mr-2"></i>Testar
+            </button>
+          </div>
+        </form>
+        
+        <div id="config-result" class="mt-4 text-center text-sm"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Global variables
+    let currentStatus = {};
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshStatus();
+      loadSettings();
+      
+      // Auto refresh every 30 seconds
+      setInterval(refreshStatus, 30000);
+    });
+
+    // Form submission
+    document.getElementById('whatsapp-config').addEventListener('submit', function(e) {
+      e.preventDefault();
+      configureWhatsApp();
+    });
+
+    // API Functions
+    async function refreshStatus() {
+      try {
+        const response = await fetch('/api/sender/status');
+        const data = await response.json();
+        
+        if (data.success) {
+          updateStatusDisplay(data.status);
+        }
+      } catch (error) {
+        console.error('Error refreshing status:', error);
+      }
+    }
+
+    function updateStatusDisplay(status) {
+      // Scheduler Status
+      const schedulerEl = document.getElementById('scheduler-status');
+      const schedulerText = document.getElementById('scheduler-text');
+      
+      if (status.scheduler_running) {
+        schedulerEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-online';
+        schedulerText.textContent = 'Rodando';
+      } else {
+        schedulerEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-offline';
+        schedulerText.textContent = 'Parado';
+      }
+
+      // WhatsApp Status
+      const whatsappEl = document.getElementById('whatsapp-status');
+      const whatsappText = document.getElementById('whatsapp-text');
+      
+      if (status.whatsapp_connected) {
+        whatsappEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-online';
+        whatsappText.textContent = 'Conectado';
+      } else {
+        whatsappEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-offline';
+        whatsappText.textContent = 'Desconectado';
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const response = await fetch('/api/sender/settings');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Carregar configurações salvas (se existirem)
+          // Por enquanto, deixar os campos em branco para preenchimento manual
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    }
+
+    async function configureWhatsApp() {
+      const apiUrl = document.getElementById('api-url').value;
+      const apiKey = document.getElementById('api-key').value;
+      const instanceName = document.getElementById('instance-name').value;
+      const groupId = document.getElementById('group-id').value;
+      
+      if (!all([apiUrl, apiKey, instanceName])) {
+        showResult('Preencha todos os campos obrigatórios', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/sender/configure-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            api_url: apiUrl,
+            api_key: apiKey,
+            instance_name: instanceName
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showResult('Configuração salva com sucesso!', 'success');
+          refreshStatus();
+        } else {
+          showResult(data.error, 'error');
+        }
+      } catch (error) {
+        showResult('Erro ao salvar configuração', 'error');
+      }
+    }
+
+    async function testConnection() {
+      try {
+        const response = await fetch('/api/sender/test-connection', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showResult('Conexão testada com sucesso!', 'success');
+        } else {
+          showResult('Falha na conexão', 'error');
+        }
+      } catch (error) {
+        showResult('Erro ao testar conexão', 'error');
+      }
+    }
+
+    function showResult(message, type) {
+      const resultEl = document.getElementById('config-result');
+      resultEl.innerHTML = `<span class="${type === 'success' ? 'text-green-600' : 'text-red-600'}"><i class="fas fa-${type === 'success' ? 'check' : 'times'} mr-1"></i>${message}</span>`;
+      
+      // Clear after 5 seconds
+      setTimeout(() => {
+        resultEl.innerHTML = '';
+      }, 5000);
+    }
+
+    function all(values) {
+      return values.every(v => v !== null && v !== undefined && v !== '');
+    }
+  </script>
+</body>
+</html>

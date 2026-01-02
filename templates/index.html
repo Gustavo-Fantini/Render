@@ -564,9 +564,7 @@
             <div class="product-details">
               <h3 id="productTitle">Produto</h3>
               <div class="price-info">
-                <span class="price-original" id="priceOriginal"></span>
                 <span class="price-current" id="priceCurrent"></span>
-                <span class="discount-badge" id="discountBadge"></span>
               </div>
               <div id="productStore" style="margin-top: 0.5rem; color: var(--text-secondary);"></div>
             </div>
@@ -576,8 +574,14 @@
         <div class="loader" id="loader"></div>
 
         <div id="messagesContainer" style="display: none;">
-          <h3 style="color: var(--accent-primary); margin: 2rem 0 1rem;">✉️ Mensagens Geradas</h3>
+          <h3 style="color: var(--accent-primary); margin: 2rem 0 1rem;">✉️ Mensagem Gerada</h3>
           <div id="messagesList"></div>
+        </div>
+        
+        <!-- FILA DE MENSAGENS PENDENTES -->
+        <div id="queueContainer" style="display: none;">
+          <h3 style="color: var(--accent-warning); margin: 2rem 0 1rem;">📋 Fila de Envios</h3>
+          <div id="queueList"></div>
         </div>
       </div>
     </div>
@@ -705,26 +709,9 @@
       document.getElementById('productTitle').textContent = 
         product.fields.title?.value || 'Produto';
 
-      // Preços
-      const priceOriginal = document.getElementById('priceOriginal');
-      const priceCurrent = document.getElementById('priceCurrent');
-      const discountBadge = document.getElementById('discountBadge');
-
-      if (product.fields.price_original?.value) {
-        priceOriginal.textContent = product.fields.price_original.value;
-        priceOriginal.style.display = 'inline';
-      } else {
-        priceOriginal.style.display = 'none';
-      }
-
-      priceCurrent.textContent = product.fields.price_current?.value || 'Preço não disponível';
-
-      if (product.fields.discount_percentage?.value) {
-        discountBadge.textContent = product.fields.discount_percentage.value;
-        discountBadge.style.display = 'inline';
-      } else {
-        discountBadge.style.display = 'none';
-      }
+      // Preço atual apenas
+      document.getElementById('priceCurrent').textContent = 
+        product.fields.price_current?.value || 'Preço não disponível';
 
       // Loja
       document.getElementById('productStore').textContent = 
@@ -798,26 +785,48 @@ ${sellerText}
         showNotification('Mensagem copiada!', 'success');
       };
 
-      // Botão Salvar
+      // Botão Enviar para Base
       const btnSave = document.createElement('button');
       btnSave.className = 'btn-small btn-save';
-      btnSave.innerHTML = '📋 Copiar';
-      btnSave.onclick = () => {
-        const textarea = messageDiv.querySelector('.message-text');
-        const textToCopy = textarea.value;
-        navigator.clipboard.writeText(textToCopy);
-        showNotification('Mensagem copiada!', 'success');
+      btnSave.innerHTML = '💾 Salvar';
+      btnSave.onclick = async () => {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '⏳ Salvando...';
+        
+        try {
+          const textarea = messageDiv.querySelector('.message-text');
+          await saveToDatabase(textarea.value);
+          btnSave.innerHTML = '✅ Salvo!';
+          btnSave.style.background = '#00ff88';
+          
+          setTimeout(() => {
+            btnSave.innerHTML = '💾 Salvar';
+            btnSave.style.background = '';
+            btnSave.disabled = false;
+          }, 2000);
+        } catch (error) {
+          btnSave.innerHTML = '❌ Erro';
+          btnSave.style.background = '#ff6b6b';
+          
+          setTimeout(() => {
+            btnSave.innerHTML = '💾 Salvar';
+            btnSave.style.background = '';
+            btnSave.disabled = false;
+          }, 2000);
+        }
       };
 
       actionsDiv.appendChild(btnEdit);
       actionsDiv.appendChild(btnCopy);
       actionsDiv.appendChild(btnSave);
 
-      // Textarea
+      // Textarea - visível e editável por padrão
       const textarea = document.createElement('textarea');
       textarea.className = 'message-text';
-      textarea.value = message.replace(/\\n/g, '\n');
-      textarea.setAttribute('readonly', true);
+      textarea.value = message.message;
+      textarea.style.minHeight = '150px';
+      textarea.style.fontSize = '14px';
+      textarea.style.lineHeight = '1.6';
 
       messageDiv.appendChild(actionsDiv);
       messageDiv.appendChild(textarea);
@@ -828,17 +837,9 @@ ${sellerText}
     // ALTERNAR MODO DE EDIÇÃO
     function toggleEditMode(messageDiv, btnEdit) {
       const textarea = messageDiv.querySelector('.message-text');
-      const isEditing = !textarea.hasAttribute('readonly');
+      const isEditing = textarea.hasAttribute('readonly');
       
       if (isEditing) {
-        // Sair do modo de edição
-        textarea.setAttribute('readonly', true);
-        textarea.style.borderColor = 'var(--border)';
-        textarea.style.backgroundColor = 'var(--bg-tertiary)';
-        btnEdit.innerHTML = '✏️ Editar';
-        btnEdit.style.background = '';
-        showNotification('Edição salva!', 'success');
-      } else {
         // Entrar no modo de edição
         textarea.removeAttribute('readonly');
         textarea.style.borderColor = 'var(--accent-warning)';
@@ -848,6 +849,85 @@ ${sellerText}
         btnEdit.style.background = 'var(--accent-warning)';
         btnEdit.style.color = 'var(--bg-primary)';
         showNotification('Modo de edição ativado!', 'info');
+      } else {
+        // Sair do modo de edição
+        textarea.setAttribute('readonly', true);
+        textarea.style.borderColor = 'var(--border)';
+        textarea.style.backgroundColor = 'var(--bg-tertiary)';
+        btnEdit.innerHTML = '✏️ Editar';
+        btnEdit.style.background = '';
+        showNotification('Edição salva!', 'success');
+      }
+    }
+
+    // SALVAR NO BANCO DE DADOS LOCAL
+    async function saveToDatabase(messageText) {
+      const imageUrl = currentProduct?.fields?.image_url?.value || '';
+      const productUrl = currentProduct?.url || '';
+      const productTitle = currentProduct?.fields?.title?.value || 'Produto';
+
+      const response = await fetch('/api/save-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: productTitle,
+          url: productUrl,
+          image_url: imageUrl,
+          message: messageText
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        stats.saved++;
+        updateStats();
+        loadQueue(); // Atualizar fila
+        showNotification('Salvo na base de dados!', 'success');
+      } else {
+        throw new Error(result.error || 'Erro ao salvar');
+      }
+    }
+
+    // CARREGAR FILA DE MENSAGENS
+    async function loadQueue() {
+      try {
+        const response = await fetch('/api/queue');
+        const data = await response.json();
+        
+        if (data.success && data.queue.length > 0) {
+          const queueContainer = document.getElementById('queueContainer');
+          const queueList = document.getElementById('queueList');
+          
+          queueContainer.style.display = 'block';
+          queueList.innerHTML = '';
+          
+          data.queue.slice(0, 5).forEach(item => {
+            const queueItem = document.createElement('div');
+            queueItem.className = 'message-container';
+            queueItem.style.marginBottom = '1rem';
+            queueItem.innerHTML = `
+              <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 0.5rem;">
+                <strong style="color: var(--accent-primary);">${item.title}</strong>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">${new Date(item.created_at).toLocaleString('pt-BR')}</span>
+              </div>
+              <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                ${item.message.substring(0, 100)}${item.message.length > 100 ? '...' : ''}
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
+                  ${item.status || 'pendente'}
+                </span>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                  📊 ${item.sent_count || 0} envios
+                </span>
+              </div>
+            `;
+            queueList.appendChild(queueItem);
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao carregar fila:', error);
       }
     }
 
@@ -890,6 +970,7 @@ ${sellerText}
       });
       
       updateStats();
+      loadQueue(); // Carregar fila inicial
       showStatus('Sistema carregado e pronto!');
     }
 
