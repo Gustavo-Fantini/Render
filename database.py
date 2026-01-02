@@ -268,6 +268,21 @@ class LocalDatabase:
             logger.error(f"Erro ao obter configuração {key}: {e}")
             return default
     
+    def update_setting(self, key: str, value: str):
+        """Atualiza uma configuração"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO settings (key, value, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                ''', (key, value))
+                conn.commit()
+                logger.info(f"Configuração atualizada: {key} = {value}")
+                
+        except Exception as e:
+            logger.error(f"Erro ao atualizar configuração {key}: {e}")
+    
     def get_stats(self) -> Dict:
         """Retorna estatísticas do sistema"""
         try:

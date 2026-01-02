@@ -298,8 +298,11 @@ def send_product_now(product_id):
             from scheduler import WhatsAppSender
             sender = WhatsAppSender(db)
             
-            message = product['message']
-            image_url = product.get('image_url')  # Obter URL da imagem
+            # Converter Row para dicionário
+            product_dict = dict(product)
+            
+            message = product_dict['message']
+            image_url = product_dict.get('image_url')  # Obter URL da imagem
             group_id = sender.get_group_id()
             
             if not group_id:

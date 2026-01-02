@@ -128,7 +128,11 @@ class SimpleScraper:
         
         logger.info("Iniciando scraping Amazon...")
         
-        # Título - mais seletores
+        # Log do HTML para debugging
+        logger.info(f"HTML size: {len(str(soup))} characters")
+        logger.info(f"HTML preview: {str(soup)[:500]}...")
+        
+        # Título - mais seletores e abordagens
         title_selectors = [
             '#productTitle',  # ID principal
             '.a-size-large.product-title-word-break',  # Classe principal
@@ -137,7 +141,9 @@ class SimpleScraper:
             '.product-title',
             'h1[id*="title"]',  # Qualquer h1 com title no ID
             '[data-automation-id="title"]',  # Elemento com automation ID
-            'meta[property="og:title"]'  # Meta tag fallback
+            'meta[property="og:title"]',  # Meta tag fallback
+            'h1',  # Qualquer h1
+            'title'  # Tag title do HTML
         ]
         
         for selector in title_selectors:
@@ -148,6 +154,14 @@ class SimpleScraper:
                         data['title'] = elem.get('content').strip()
                         logger.info(f"Título encontrado via meta: {data['title']}")
                         break
+                elif selector == 'title':
+                    elem = soup.find('title')
+                    if elem:
+                        title = elem.get_text(strip=True)
+                        if title and len(title) > 5:
+                            data['title'] = title
+                            logger.info(f"Título encontrado via title tag: {title}")
+                            break
                 else:
                     elem = soup.select_one(selector)
                     if elem:
@@ -175,7 +189,11 @@ class SimpleScraper:
             '.a-price.a-size-medium.a-color-price',
             '.a-price.a-text-price.a-size-medium.apexPriceToPay',
             'span[data-a-color="price"]',
-            'meta[property="product:price:amount"]'
+            'meta[property="product:price:amount"]',
+            # Abordagens genéricas
+            '[class*="price"]',
+            '[data*="price"]',
+            'span[class*="price"]'
         ]
         
         for selector in price_selectors:
@@ -217,7 +235,10 @@ class SimpleScraper:
             '.a-dynamic-image-container img',  # Container dinâmico
             'img[alt*="Product"]',  # Qualquer imagem com Product no alt
             'img[src*="images"]',  # Qualquer imagem com images no src
-            'meta[property="og:image"]'  # Meta tag fallback
+            'meta[property="og:image"]',  # Meta tag fallback
+            'img[src*="jpg"]',  # Qualquer imagem jpg
+            'img[src*="jpeg"]',  # Qualquer imagem jpeg
+            'img[src*="png"]'  # Qualquer imagem png
         ]
         
         for selector in image_selectors:
