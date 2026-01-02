@@ -141,23 +141,23 @@
     // API Functions
     async function refreshStatus() {
       try {
-        const response = await fetch('/api/whatsapp/status');
+        const response = await fetch('/api/sender/status');
         const data = await response.json();
         
         if (data.success) {
-          updateStatusDisplay(data.connection, data.instance);
+          updateStatusDisplay(data.status);
         }
       } catch (error) {
         console.error('Error refreshing status:', error);
       }
     }
 
-    function updateStatusDisplay(connection, instance) {
-      // Scheduler Status (usando connection status)
+    function updateStatusDisplay(status) {
+      // Scheduler Status
       const schedulerEl = document.getElementById('scheduler-status');
       const schedulerText = document.getElementById('scheduler-text');
       
-      if (connection.success) {
+      if (status.scheduler_running) {
         schedulerEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-online';
         schedulerText.textContent = 'Rodando';
       } else {
@@ -169,7 +169,7 @@
       const whatsappEl = document.getElementById('whatsapp-status');
       const whatsappText = document.getElementById('whatsapp-text');
       
-      if (connection.success && connection.connected) {
+      if (status.whatsapp_connected) {
         whatsappEl.className = 'w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold mb-2 status-online';
         whatsappText.textContent = 'Conectado';
       } else {
@@ -180,7 +180,7 @@
 
     async function loadSettings() {
       try {
-        const response = await fetch('/api/whatsapp/status');
+        const response = await fetch('/api/sender/settings');
         const data = await response.json();
         
         if (data.success) {
@@ -196,14 +196,15 @@
       const apiUrl = document.getElementById('api-url').value;
       const apiKey = document.getElementById('api-key').value;
       const instanceName = document.getElementById('instance-name').value;
+      const groupId = document.getElementById('group-id').value;
       
-      if (!all([apiUrl, apiKey])) {
+      if (!all([apiUrl, apiKey, instanceName])) {
         showResult('Preencha todos os campos obrigatórios', 'error');
         return;
       }
 
       try {
-        const response = await fetch('/api/whatsapp/configure', {
+        const response = await fetch('/api/sender/configure-whatsapp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -228,7 +229,7 @@
 
     async function testConnection() {
       try {
-        const response = await fetch('/api/whatsapp/test', {
+        const response = await fetch('/api/sender/test-connection', {
           method: 'POST'
         });
         
