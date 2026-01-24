@@ -29,8 +29,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = 'freeisland_secret_key_2024'
+app.config['JSON_AS_ASCII'] = False
 CORS(app)
-app.secret_key = 'freeisland-secret-key-2026'
 
 # Configurações Supabase
 SUPABASE_URL = "https://cnwrcrpihldqejyvgysn.supabase.co"
@@ -361,7 +362,7 @@ class FreeIslandScraper:
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             self.driver.get(url)
-            time.sleep(2)
+            time.sleep(5)
             
             # Esperar carregamento completo
             try:
@@ -390,7 +391,7 @@ class FreeIslandScraper:
                             if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
                                 logger.info(f"Link do produto encontrado: {href}")
                                 self.driver.get(href)
-                                time.sleep(2)
+                                time.sleep(5)
                                 break
                         except:
                             continue
@@ -583,7 +584,7 @@ class FreeIslandScraper:
         try:
             logger.info(f"Acessando Shopee: {url}")
             self.driver.get(url)
-            time.sleep(2)
+            time.sleep(5)
             
             data = {'url': url}
             
@@ -795,12 +796,11 @@ def scrape():
             coupon_discount
         )
         
-        response_data = {
+        return jsonify({
             'product': product_data,
             'message': message,
             'success': True
-        }
-        return Response(json.dumps(response_data, ensure_ascii=False), mimetype='application/json')
+        })
         
     except Exception as e:
         logger.error(f"Erro no scraping: {e}")
