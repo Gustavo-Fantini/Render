@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Island - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="url"], input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .coupon-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .coupon-section.active {
+            display: block;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .product-preview {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .product-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            float: left;
+            margin-right: 20px;
+        }
+
+        .product-info {
+            overflow: hidden;
+        }
+
+        .product-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .message-preview {
+            background: #fff;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🏝️ Free Island</div>
+            <div class="user-info">
+                <span>Bem-vindo, {{ user_name }}!</span>
+                <a href="/logout" class="btn-logout">Sair</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2 class="card-title">
+                🛒 Extrair Promoção
+            </h2>
+            
+            <form id="scrapeForm">
+                <div class="form-group">
+                    <label for="url">URL do Produto</label>
+                    <input type="url" id="url" name="url" required 
+                           placeholder="https://www.amazon.com.br/exemplo ou https://www.mercadolivre.com.br/exemplo">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="freeShipping" name="free_shipping">
+                    <label for="freeShipping">🚚 Frete Grátis</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="hasCoupon" name="has_coupon">
+                    <label for="hasCoupon">🎫 Possui Cupom de Desconto</label>
+                </div>
+
+                <div class="coupon-section" id="couponSection">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="couponName">Nome do Cupom</label>
+                            <input type="text" id="couponName" name="coupon_name" placeholder="EX: PROMO10">
+                        </div>
+                        <div class="form-group">
+                            <label for="couponDiscount">Desconto (%)</label>
+                            <input type="number" id="couponDiscount" name="coupon_discount" 
+                                   min="1" max="100" placeholder="10">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="scrapeBtn">
+                    Extrair Dados
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Extraindo dados do produto... Aguarde!</p>
+            </div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="card">
+                <h3 class="card-title">📦 Produto Encontrado</h3>
+                
+                <div class="product-preview" id="productPreview">
+                    <!-- Produto será inserido aqui -->
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Mensagem Gerada</label>
+                    <textarea id="message" name="message"></textarea>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" id="editBtn">
+                        ✏️ Editar Mensagem
+                    </button>
+                    <button class="btn btn-success" id="saveBtn">
+                        💾 Salvar no Supabase
+                    </button>
+                    <button class="btn btn-secondary" id="resetBtn">
+                        🔄 Nova Busca
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProduct = null;
+        let currentMessage = '';
+
+        // Toggle coupon section
+        document.getElementById('hasCoupon').addEventListener('change', function() {
+            const couponSection = document.getElementById('couponSection');
+            if (this.checked) {
+                couponSection.classList.add('active');
+            } else {
+                couponSection.classList.remove('active');
+            }
+        });
+
+        // Form submit
+        document.getElementById('scrapeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const freeShipping = document.getElementById('freeShipping').checked;
+            const hasCoupon = document.getElementById('hasCoupon').checked;
+            const couponName = hasCoupon ? document.getElementById('couponName').value : null;
+            const couponDiscount = hasCoupon ? document.getElementById('couponDiscount').value : null;
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('scrapeBtn').disabled = true;
+
+            try {
+                const response = await fetch('/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        free_shipping: freeShipping,
+                        coupon_name: couponName,
+                        coupon_discount: couponDiscount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentProduct = data.product;
+                    currentMessage = data.message;
+                    
+                    // Show product preview
+                    showProductPreview(data.product);
+                    
+                    // Show message
+                    document.getElementById('message').value = data.message;
+                    
+                    // Show result section
+                    document.getElementById('resultSection').classList.add('active');
+                    
+                    // Scroll to results
+                    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showAlert('Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Erro de conexão. Tente novamente.', 'error');
+            } finally {
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('scrapeBtn').disabled = false;
+            }
+        });
+
+        // Edit message
+        document.getElementById('editBtn').addEventListener('click', function() {
+            const messageTextarea = document.getElementById('message');
+            messageTextarea.focus();
+            messageTextarea.select();
+            
+            // Mostrar alerta informativo
+            showAlert('Edite a mensagem no campo acima e depois clique em "Salvar no Supabase"', 'success');
+        });
+
+        // Save to Supabase
+        document.getElementById('saveBtn').addEventListener('click', async function() {
+            if (!currentProduct || !currentMessage) {
+                showAlert('Nenhum produto para salvar', 'error');
+                return;
+            }
+
+            const message = document.getElementById('message').value;
+            
+            this.disabled = true;
+            this.textContent = '💾 Salvando...';
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product: currentProduct,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Produto salvo com sucesso no Supabase!', 'success');
+                    setTimeout(() => {
+                        resetForm();
+                    }, 2000);
+                } else {
+                    showAlert('Erro ao salvar: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Erro de conexão ao salvar', 'error');
+            } finally {
+                this.disabled = false;
+                this.textContent = '💾 Salvar no Supabase';
+            }
+        });
+
+        // Reset form
+        document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+        function showProductPreview(product) {
+            const preview = document.getElementById('productPreview');
+            
+            let imageHtml = '';
+            if (product.image_url) {
+                imageHtml = `<img src="${product.image_url}" alt="Produto" class="product-image">`;
+            }
+
+            preview.innerHTML = `
+                ${imageHtml}
+                <div class="product-info">
+                    <div class="product-title">${product.title || 'Título não encontrado'}</div>
+                    <div class="product-price">${product.price || 'Preço não encontrado'}</div>
+                </div>
+                <div style="clear: both;"></div>
+            `;
+        }
+
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // Create new alert
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            // Insert after the first card
+            const firstCard = document.querySelector('.card');
+            firstCard.parentNode.insertBefore(alert, firstCard.nextSibling);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function resetForm() {
+            document.getElementById('scrapeForm').reset();
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('couponSection').classList.remove('active');
+            currentProduct = null;
+            currentMessage = '';
+            
+            // Remove any alerts
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => alert.remove());
+        }
+    </script>
+</body>
+</html>

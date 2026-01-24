@@ -1,0 +1,239 @@
+2026-01-23 22:01:34,807 - INFO - ====== WebDriver manager ======
+2026-01-23 22:01:35,702 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:01:36,172 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:01:36,639 - INFO - There is no [win64] chromedriver "143.0.7499.192" for browser google-chrome "143.0.7499" in cache
+2026-01-23 22:01:36,640 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:01:37,696 - INFO - WebDriver version 143.0.7499.192 selected
+2026-01-23 22:01:37,703 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.192/win32/chromedriver-win32.zip
+2026-01-23 22:01:37,703 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.192/win32/chromedriver-win32.zip
+2026-01-23 22:01:38,167 - INFO - Driver downloading response is 200
+2026-01-23 22:01:38,423 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:01:38,992 - INFO - Driver has been saved in cache [C:\Users\gusta\.wdm\drivers\chromedriver\win64\143.0.7499.192]
+2026-01-23 22:01:41,209 - INFO - WebDriver inicializado com sucesso
+2026-01-23 22:01:41,221 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.137:5000
+2026-01-23 22:01:41,221 - INFO - [33mPress CTRL+C to quit[0m
+2026-01-23 22:02:37,712 - INFO - 127.0.0.1 - - [23/Jan/2026 22:02:37] "[32mGET / HTTP/1.1[0m" 302 -
+2026-01-23 22:02:37,732 - INFO - 127.0.0.1 - - [23/Jan/2026 22:02:37] "GET /login HTTP/1.1" 200 -
+2026-01-23 22:02:47,232 - INFO - 127.0.0.1 - - [23/Jan/2026 22:02:47] "[32mPOST /auth HTTP/1.1[0m" 302 -
+2026-01-23 22:02:47,246 - INFO - 127.0.0.1 - - [23/Jan/2026 22:02:47] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:03:00,284 - INFO - Site identificado: mercadolivre
+2026-01-23 22:03:00,284 - INFO - Acessando Mercado Livre: https://mercadolivre.com/sec/1f48LPw
+2026-01-23 22:03:04,537 - INFO - Título encontrado: Notebook Ideapad Slim 3 Ryzen 7 7735hs 8gb 512gb Ssd Amd Radeon Graphics 15.3 (1920x1200) Linux 83mms00100
+2026-01-23 22:03:04,562 - INFO - Processando preço: '3.039'
+2026-01-23 22:03:04,562 - INFO - Preço processado: 3.039 -> R$ 3.039,00
+2026-01-23 22:03:04,563 - INFO - Preço encontrado: 3.039 -> R$ 3.039,00
+2026-01-23 22:03:04,650 - INFO - Imagem encontrada: https://http2.mlstatic.com/D_Q_NP_2X_610078-MLA100473387869_122025-V.webp
+2026-01-23 22:03:04,651 - INFO - 127.0.0.1 - - [23/Jan/2026 22:03:04] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:03:23,715 - INFO - Produto salvo no Supabase com sucesso
+2026-01-23 22:03:23,717 - INFO - 127.0.0.1 - - [23/Jan/2026 22:03:23] "POST /save HTTP/1.1" 200 -
+2026-01-23 22:04:14,956 - INFO - 127.0.0.1 - - [23/Jan/2026 22:04:14] "[33mGET /supabase/stats HTTP/1.1[0m" 404 -
+2026-01-23 22:09:14,946 - INFO - 127.0.0.1 - - [23/Jan/2026 22:09:14] "[33mGET /supabase/stats HTTP/1.1[0m" 404 -
+2026-01-23 22:11:27,554 - INFO - Site identificado: unknown
+2026-01-23 22:11:27,555 - INFO - 127.0.0.1 - - [23/Jan/2026 22:11:27] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:13:58,006 - INFO - Site identificado: amazon
+2026-01-23 22:13:58,006 - INFO - Acessando Amazon: https://amzn.to/3YW8RH6
+2026-01-23 22:14:03,753 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:14:03,778 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:14:03,778 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:14:03,779 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:14:03,796 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:14:03,796 - INFO - 127.0.0.1 - - [23/Jan/2026 22:14:03] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:17:01,392 - INFO - Site identificado: amazon
+2026-01-23 22:17:01,393 - INFO - Acessando Amazon: https://amzn.to/3YW8RH6
+2026-01-23 22:17:06,760 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:17:06,787 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:17:06,787 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:17:06,787 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:17:06,803 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:17:06,804 - INFO - 127.0.0.1 - - [23/Jan/2026 22:17:06] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:17:07,838 - INFO - 127.0.0.1 - - [23/Jan/2026 22:17:07] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:17:11,508 - INFO - Site identificado: amazon
+2026-01-23 22:17:11,508 - INFO - Acessando Amazon: https://amzn.to/3YW8RH6
+2026-01-23 22:17:16,516 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:17:16,530 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:17:16,531 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:17:16,531 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:17:16,544 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:17:16,544 - INFO - 127.0.0.1 - - [23/Jan/2026 22:17:16] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:18:16,668 - INFO - 127.0.0.1 - - [23/Jan/2026 22:18:16] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:18:23,815 - INFO - Site identificado: amazon
+2026-01-23 22:18:23,816 - INFO - Acessando Amazon: https://amzn.to/4bb6do5
+2026-01-23 22:18:28,855 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:18:28,871 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:18:28,872 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:18:28,872 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:18:28,886 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:18:28,887 - INFO - 127.0.0.1 - - [23/Jan/2026 22:18:28] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:18:40,955 - INFO - Site identificado: amazon
+2026-01-23 22:18:40,957 - INFO - Acessando Amazon: https://amzn.to/3LueA3O
+2026-01-23 22:18:45,915 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:18:45,930 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:18:45,931 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:18:45,931 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:18:45,946 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:18:45,946 - INFO - 127.0.0.1 - - [23/Jan/2026 22:18:45] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:20:53,834 - INFO - Site identificado: unknown
+2026-01-23 22:20:53,835 - INFO - 127.0.0.1 - - [23/Jan/2026 22:20:53] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:20:56,817 - INFO - 127.0.0.1 - - [23/Jan/2026 22:20:56] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:20:59,836 - INFO - Site identificado: unknown
+2026-01-23 22:20:59,836 - INFO - 127.0.0.1 - - [23/Jan/2026 22:20:59] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:21:30,945 - INFO - Site identificado: amazon
+2026-01-23 22:21:30,947 - INFO - Acessando Amazon: https://amzn.to/3LueA3O
+2026-01-23 22:21:36,051 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:21:36,067 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:21:36,067 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:21:36,068 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:21:36,079 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:21:36,080 - INFO - 127.0.0.1 - - [23/Jan/2026 22:21:36] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:21:37,434 - INFO - 127.0.0.1 - - [23/Jan/2026 22:21:37] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:21:37,483 - INFO - 127.0.0.1 - - [23/Jan/2026 22:21:37] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:21:39,696 - INFO - Site identificado: amazon
+2026-01-23 22:21:39,696 - INFO - Acessando Amazon: https://amzn.to/3LueA3O
+2026-01-23 22:21:44,514 - INFO - Título encontrado: Attack Shark AK820 Teclado mecânico 75% hot-swappable, botão rotativo, USB-C, gasket com 5 camadas antirruído, LED branco, switch vermelho linear,Compatível PC/Win/Mac (preto)
+2026-01-23 22:21:44,529 - INFO - Processando preço: 'R$399
+99'
+2026-01-23 22:21:44,530 - INFO - Preço processado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:21:44,530 - INFO - Preço encontrado: R$399
+99 -> R$ 39.999,00
+2026-01-23 22:21:44,544 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/61FrYD4ao+L._AC_SX679_.jpg
+2026-01-23 22:21:44,545 - INFO - 127.0.0.1 - - [23/Jan/2026 22:21:44] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:21:52,794 - INFO - Site identificado: amazon
+2026-01-23 22:21:52,795 - INFO - Acessando Amazon: https://amzn.to/4qKmO7g
+2026-01-23 22:21:58,156 - INFO - Título encontrado: Teclado mecânico para jogos DAIDAI×AJAZZ AK820 75% com junta, fio e botão de volume - LED virado para o sul - Teclas PBT - Teclado RGB de troca rápida programável
+2026-01-23 22:21:58,174 - INFO - Processando preço: 'R$432
+95'
+2026-01-23 22:21:58,174 - INFO - Preço processado: R$432
+95 -> R$ 43.295,00
+2026-01-23 22:21:58,174 - INFO - Preço encontrado: R$432
+95 -> R$ 43.295,00
+2026-01-23 22:21:58,188 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/612fnwTcoDL._AC_SX679_.jpg
+2026-01-23 22:21:58,189 - INFO - 127.0.0.1 - - [23/Jan/2026 22:21:58] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:25:36,111 - INFO - 127.0.0.1 - - [23/Jan/2026 22:25:36] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:25:36,182 - INFO - 127.0.0.1 - - [23/Jan/2026 22:25:36] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:25:40,552 - INFO - Site identificado: unknown
+2026-01-23 22:25:40,553 - INFO - 127.0.0.1 - - [23/Jan/2026 22:25:40] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:00,398 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:00] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:27:00,454 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:00] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:27:01,951 - INFO - Site identificado: unknown
+2026-01-23 22:27:01,951 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:01] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:03,326 - INFO - Site identificado: unknown
+2026-01-23 22:27:03,326 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:03] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:03,475 - INFO - Site identificado: unknown
+2026-01-23 22:27:03,476 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:03] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:03,628 - INFO - Site identificado: unknown
+2026-01-23 22:27:03,628 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:03] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:54,652 - INFO - Site identificado: unknown
+2026-01-23 22:27:54,653 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:54] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:27:55,693 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:55] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:27:55,763 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:55] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:27:57,190 - INFO - Site identificado: unknown
+2026-01-23 22:27:57,191 - INFO - 127.0.0.1 - - [23/Jan/2026 22:27:57] "[35m[1mPOST /scrape HTTP/1.1[0m" 500 -
+2026-01-23 22:28:14,861 - INFO - ====== WebDriver manager ======
+2026-01-23 22:28:16,263 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:16,811 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:17,286 - INFO - Driver [C:\Users\gusta\.wdm\drivers\chromedriver\win64\143.0.7499.192\chromedriver-win32/chromedriver.exe] found in cache
+2026-01-23 22:28:19,242 - INFO - WebDriver inicializado com sucesso
+2026-01-23 22:28:19,244 - INFO - ====== WebDriver manager ======
+2026-01-23 22:28:20,174 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:20,653 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:21,135 - INFO - Driver [C:\Users\gusta\.wdm\drivers\chromedriver\win64\143.0.7499.192\chromedriver-win32/chromedriver.exe] found in cache
+2026-01-23 22:28:22,201 - INFO - WebDriver inicializado com sucesso
+2026-01-23 22:28:22,201 - INFO - Verificando URL: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 22:28:22,201 - INFO - Domínio extraído: divulgador.magalu.com
+2026-01-23 22:28:22,202 - INFO - URL completa: https://divulgador.magalu.com/hgiwdrdb
+2026-01-23 22:28:22,202 - INFO - Magazine Luiza detectado: divulgador.magalu.com
+2026-01-23 22:28:24,286 - INFO - WebDriver fechado
+2026-01-23 22:28:33,534 - INFO - ====== WebDriver manager ======
+2026-01-23 22:28:34,486 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:34,990 - INFO - Get LATEST chromedriver version for google-chrome
+2026-01-23 22:28:35,457 - INFO - Driver [C:\Users\gusta\.wdm\drivers\chromedriver\win64\143.0.7499.192\chromedriver-win32/chromedriver.exe] found in cache
+2026-01-23 22:28:36,533 - INFO - WebDriver inicializado com sucesso
+2026-01-23 22:28:36,562 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.137:5000
+2026-01-23 22:28:36,562 - INFO - [33mPress CTRL+C to quit[0m
+2026-01-23 22:29:45,925 - INFO - 127.0.0.1 - - [23/Jan/2026 22:29:45] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:29:45,980 - INFO - 127.0.0.1 - - [23/Jan/2026 22:29:45] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:29:56,638 - INFO - Verificando URL: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 22:29:56,638 - INFO - Domínio extraído: divulgador.magalu.com
+2026-01-23 22:29:56,638 - INFO - URL completa: https://divulgador.magalu.com/hgiwdrdb
+2026-01-23 22:29:56,639 - INFO - Magazine Luiza detectado: divulgador.magalu.com
+2026-01-23 22:29:56,639 - INFO - Site identificado: magazineluiza
+2026-01-23 22:29:56,639 - INFO - Acessando Magazine Luiza: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 22:30:06,174 - INFO - URL atual após carregamento: https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a16-128gb-cinza-5g-4gb-ram-67-fhd-cam-tripla-ate-50mp-selfie-13mp-bateria-5000mah/divulgador/oferta/238898400/te/ga16/?promoter_id=5334500&partner_id=3440
+2026-01-23 22:30:06,292 - INFO - Encontrado link do produto: https://atendimento.magazineluiza.com.br/hc/pt-br?open=chat_televendas
+2026-01-23 22:31:29,351 - INFO - Imagem encontrada via img[src*="mlcdn.com.br"]: https://wx.mlcdn.com.br/site/desk/header/lu-logo-avatar.png
+2026-01-23 22:31:29,351 - INFO - Scraping Magazine Luiza - Título: False, Preço: False, Imagem: True
+2026-01-23 22:31:29,352 - WARNING - Scraping Magazine Luiza parcial ou falhou
+2026-01-23 22:31:29,352 - INFO - 127.0.0.1 - - [23/Jan/2026 22:31:29] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:31:47,503 - INFO - Verificando URL: https://mercadolivre.com/sec/2gPtx7v
+2026-01-23 22:31:47,505 - INFO - Domínio extraído: mercadolivre.com
+2026-01-23 22:31:47,505 - INFO - URL completa: https://mercadolivre.com/sec/2gptx7v
+2026-01-23 22:31:47,505 - INFO - Site identificado: mercadolivre
+2026-01-23 22:31:47,505 - INFO - Acessando Mercado Livre: https://mercadolivre.com/sec/2gPtx7v
+2026-01-23 22:31:51,839 - INFO - Título encontrado: Ventilador De Mesa 30cm Super Power Mondial 60w Vsp-30-b 30 Cm Preto 127v Prata Polipropileno 6
+2026-01-23 22:31:51,856 - INFO - Processando preço: '108'
+2026-01-23 22:31:51,857 - INFO - Preço processado: 108 -> R$ 108,00
+2026-01-23 22:31:51,857 - INFO - Preço encontrado: 108 -> R$ 108,00
+2026-01-23 22:31:51,875 - INFO - Imagem encontrada: https://http2.mlstatic.com/D_Q_NP_2X_620576-MLA99958768953_112025-V.webp
+2026-01-23 22:31:51,876 - INFO - 127.0.0.1 - - [23/Jan/2026 22:31:51] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:32:45,687 - INFO - Verificando URL: https://amzn.to/4jUzhSZ
+2026-01-23 22:32:45,687 - INFO - Domínio extraído: amzn.to
+2026-01-23 22:32:45,687 - INFO - URL completa: https://amzn.to/4juzhsz
+2026-01-23 22:32:45,687 - INFO - Site identificado: amazon
+2026-01-23 22:32:45,687 - INFO - Acessando Amazon: https://amzn.to/4jUzhSZ
+2026-01-23 22:32:50,672 - INFO - Título encontrado: Teclado mecânico para jogos DAIDAI×AJAZZ AK820 75% com junta, fio e botão de volume - LED virado para o sul - Teclas PBT - Teclado RGB de troca rápida programável
+2026-01-23 22:32:50,694 - INFO - Processando preço: 'R$432
+95'
+2026-01-23 22:32:50,695 - INFO - Preço Amazon corrigido (quebra linha): R$432
+95 -> 432.95
+2026-01-23 22:32:50,695 - INFO - Preço processado: R$432
+95 -> R$ 432,95
+2026-01-23 22:32:50,697 - INFO - Preço encontrado: R$432
+95 -> R$ 432,95
+2026-01-23 22:32:50,726 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/612fnwTcoDL._AC_SX679_.jpg
+2026-01-23 22:32:50,728 - INFO - 127.0.0.1 - - [23/Jan/2026 22:32:50] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 22:36:33,478 - INFO - 127.0.0.1 - - [23/Jan/2026 22:36:33] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 22:36:33,532 - INFO - 127.0.0.1 - - [23/Jan/2026 22:36:33] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 22:36:38,009 - INFO - Verificando URL: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 22:36:38,009 - INFO - Domínio extraído: divulgador.magalu.com
+2026-01-23 22:36:38,009 - INFO - URL completa: https://divulgador.magalu.com/hgiwdrdb
+2026-01-23 22:36:38,009 - INFO - Magazine Luiza detectado: divulgador.magalu.com
+2026-01-23 22:36:38,009 - INFO - Site identificado: magazineluiza
+2026-01-23 22:36:38,010 - INFO - Acessando Magazine Luiza: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 22:36:47,237 - INFO - URL atual após carregamento: https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a16-128gb-cinza-5g-4gb-ram-67-fhd-cam-tripla-ate-50mp-selfie-13mp-bateria-5000mah/divulgador/oferta/238898400/te/ga16/?promoter_id=5334500&partner_id=3440
+2026-01-23 22:36:47,303 - INFO - Encontrado link do produto: https://atendimento.magazineluiza.com.br/hc/pt-br?open=chat_televendas
+2026-01-23 22:38:09,224 - INFO - Imagem encontrada via img[src*="mlcdn.com.br"]: https://wx.mlcdn.com.br/site/desk/header/lu-logo-avatar.png
+2026-01-23 22:38:09,224 - INFO - Scraping Magazine Luiza - Título: False, Preço: False, Imagem: True
+2026-01-23 22:38:09,224 - WARNING - Scraping Magazine Luiza parcial ou falhou
+2026-01-23 22:38:09,225 - INFO - 127.0.0.1 - - [23/Jan/2026 22:38:09] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 23:06:39,614 - INFO - 127.0.0.1 - - [23/Jan/2026 23:06:39] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 23:06:39,692 - INFO - 127.0.0.1 - - [23/Jan/2026 23:06:39] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 23:06:41,628 - INFO - Verificando URL: https://amzn.to/4jUzhSZ
+2026-01-23 23:06:41,628 - INFO - Domínio extraído: amzn.to
+2026-01-23 23:06:41,628 - INFO - URL completa: https://amzn.to/4juzhsz
+2026-01-23 23:06:41,628 - INFO - Site identificado: amazon
+2026-01-23 23:06:41,629 - INFO - Acessando Amazon: https://amzn.to/4jUzhSZ
