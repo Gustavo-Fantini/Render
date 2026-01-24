@@ -795,11 +795,12 @@ def scrape():
             coupon_discount
         )
         
-        return jsonify({
+        response_data = {
             'product': product_data,
             'message': message,
             'success': True
-        })
+        }
+        return Response(json.dumps(response_data, ensure_ascii=False), mimetype='application/json')
         
     except Exception as e:
         logger.error(f"Erro no scraping: {e}")
