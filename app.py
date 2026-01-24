@@ -399,46 +399,32 @@ class FreeIslandScraper:
             
             data = {'url': url}
             
-            # Título - seletores baseados no HTML real 2026
+            # Título - seletores baseados no HTML real da página de divulgador
             title_selectors = [
-                # HTML real fornecido - prioridade máxima
-                'h1[data-testid="heading-product-title"]',
-                'h1.sc-dcJsrY.jjGTqv',  # Classe específica do HTML
+                # HTML real da página de divulgador - prioridade máxima
+                'h2[data-testid="heading"]',
+                'h2.break-words.text-on-surface-2.font-xsm-regular',
+                'h2.break-words.text-on-surface-2',
+                'h2.text-on-surface-2.font-xsm-regular',
+                'h2[data-testid="heading"]',
                 
-                # Página de produto
+                # Página de produto (fallback)
+                'h1[data-testid="heading-product-title"]',
+                'h1.sc-dcJsrY.jjGTqv',
                 'h2[data-testid="heading-product-title"]',
                 '[data-testid="product-title"]',
-                '[data-testid="heading-product"]',
-                '.product-title',
-                '.product-name',
-                'h1.product-title',
-                'h2.product-title',
-                
-                # Página de divulgador
-                'h2[data-testid="heading"]',
-                'h1[data-testid="heading"]',
-                '.text-on-surface-2.font-xsm-regular',
-                'h2.break-words',
-                'h1',
-                '[data-testid="heading"]',
-                '.font-xsm-regular.text-on-surface-2',
-                'h2.text-on-surface-2',
-                'h1.text-on-surface-2',
-                '.break-words.text-on-surface-2',
                 
                 # Genéricos
+                '[data-testid="heading"]',
+                '.break-words',
+                '.text-on-surface-2',
                 '[class*="heading"]',
                 '[class*="title"]',
                 '[class*="product"]',
                 '[class*="name"]',
                 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                'title',  # Tag title do HTML
-                'div[class*="title"]',
-                'span[class*="title"]',
-                'p[class*="title"]',
-                'div',  # Último recurso
-                'span',
-                'p'
+                'title',
+                'div', 'span', 'p'
             ]
             
             logger.info(f"URL atual: {self.driver.current_url}")
@@ -464,41 +450,29 @@ class FreeIslandScraper:
             if 'title' not in data:
                 logger.warning("Título não encontrado com nenhum selector")
             
-            # Preço - seletores baseados no HTML real 2026
+            # Preço - seletores baseados no HTML real da página de divulgador
             price_selectors = [
-                # HTML real fornecido - prioridade máxima
+                # HTML real da página de divulgador - prioridade máxima
                 'p[data-testid="price-value"]',
-                'p.sc-dcJsrY.hsCKLu.sc-cXPBUD.kYFKbo',  # Classe específica do HTML
+                'p.text-on-surface-2.font-xlg-bold.md\\:font-2xlg-bold',
                 'p[data-testid="price-original"]',
-                'p.sc-dcJsrY.cHdUaZ.sc-cezyBN.kwGnVt',  # Preço original
+                'p.text-on-surface-3.font-xsm-regular',
                 
-                # Página de produto
+                # Página de produto (fallback)
+                'p.sc-dcJsrY.hsCKLu.sc-cXPBUD.kYFKbo',
+                'p.sc-dcJsrY.cHdUaZ.sc-cezyBN.kwGnVt',
                 '[data-testid="price-value"]',
                 '[data-testid="price"]',
                 '[data-testid="price-current"]',
-                '.price-current',
-                '.price-value',
-                '.product-price',
-                '.price',
-                'span.price-current',
-                'p.price-current',
-                
-                # Página de divulgador
-                '.text-on-surface-2.font-xlg-bold',
-                '.text-on-surface-2.font-2xlg-bold',
-                '.font-xlg-bold.text-on-surface-2',
-                '.font-2xlg-bold.text-on-surface-2',
-                'p.text-on-surface-2',
-                'span.text-on-surface-2',
                 
                 # Genéricos
+                '.font-xlg-bold',
+                '.font-2xlg-bold',
+                '.font-bold',
                 '[class*="price"]',
                 '[data-testid*="price"]',
                 '[class*="valor"]',
                 '[class*="money"]',
-                '.font-xlg-bold',
-                '.font-2xlg-bold',
-                '.font-bold',
                 'p', 'span', 'div', 'strong'
             ]
             
@@ -527,39 +501,31 @@ class FreeIslandScraper:
             if 'price' not in data:
                 logger.warning("Preço não encontrado com nenhum selector")
             
-            # Imagem - seletores baseados no HTML real 2026
+            # Imagem - seletores baseados no HTML real da página de divulgador
             image_selectors = [
-                # HTML real fornecido - prioridade máxima
-                'img[data-testid="image-selected-thumbnail"]',
-                'img.sc-hzhJZQ.knorgy',  # Classe específica do HTML
-                'img[data-testid="media-gallery-image"]',
-                'img.sc-hzhJZQ.dCUEWm',  # Classe específica do HTML
-                
-                # Página de produto
-                'img[data-testid="image"]',
-                '[data-testid="image"]',
-                'img[data-testid="product-image"]',
-                '[data-testid="product-image"]',
-                '.product-image',
-                '.product-picture',
-                '.gallery-image',
-                'img.product-image',
-                
-                # Página de divulgador
+                # HTML real da página de divulgador - prioridade máxima
+                'img[data-testid="image"][alt*="Imagem do produto"]',
+                'img[data-testid="image"][alt*="produto"]',
                 'img[alt*="Imagem do produto"]',
                 'img[alt*="imagem do produto"]',
                 'img[alt*="produto"]',
                 'img[alt*="Produto"]',
-                'img[decoding="auto"]',
                 
-                # Domínios específicos
+                # Página de produto (fallback)
+                'img[data-testid="image-selected-thumbnail"]',
+                'img.sc-hzhJZQ.knorgy',
+                'img[data-testid="media-gallery-image"]',
+                'img.sc-hzhJZQ.dCUEWm',
+                
+                # Domínios específicos - prioridade para a-static.mlcdn.com.br
+                'img[src*="a-static.mlcdn.com.br"]',
                 'img[src*="mlcdn.com.br"]',
                 'img[src*="wx.mlcdn.com.br"]',
                 'img[src*="magazineluiza.com.br"]',
                 'img[src*="magalu.com.br"]',
-                'img[src*="a-static.mlcdn.com.br"]',  # Do HTML real
                 
                 # Genéricos
+                'img[decoding="auto"]',
                 'img[src*="http"]',
                 'img[src*="https"]',
                 'img[src*="cdn"]',

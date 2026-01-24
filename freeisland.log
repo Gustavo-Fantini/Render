@@ -307,3 +307,17 @@
 2026-01-23 23:52:00,602 - INFO - Scraping Magazine Luiza - Título: False, Preço: False, Imagem: True
 2026-01-23 23:52:00,602 - WARNING - Scraping Magazine Luiza parcial ou falhou
 2026-01-23 23:52:00,603 - INFO - 127.0.0.1 - - [23/Jan/2026 23:52:00] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 23:52:47,968 - INFO - 127.0.0.1 - - [23/Jan/2026 23:52:47] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 23:52:48,007 - INFO - 127.0.0.1 - - [23/Jan/2026 23:52:48] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 23:53:11,812 - INFO - Verificando URL: https://divulgador.magalu.com/l8fslPpe
+2026-01-23 23:53:11,814 - INFO - Domínio extraído: divulgador.magalu.com
+2026-01-23 23:53:11,814 - INFO - URL completa: https://divulgador.magalu.com/l8fslppe
+2026-01-23 23:53:11,814 - INFO - Magazine Luiza detectado: divulgador.magalu.com
+2026-01-23 23:53:11,814 - INFO - Site identificado: magazineluiza
+2026-01-23 23:53:11,814 - INFO - Acessando Magazine Luiza: https://divulgador.magalu.com/l8fslPpe
+2026-01-23 23:53:21,227 - INFO - URL atual após carregamento: https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a16-128gb-preto-4gb-ram-67-fhd-cam-tripla-de-ate-50mp-selfie-13mp-bateria-5000mah/divulgador/oferta/238898600/te/ga16/?promoter_id=5334500&partner_id=3440
+2026-01-23 23:53:21,283 - INFO - Encontrado link do produto: https://atendimento.magazineluiza.com.br/hc/pt-br?open=chat_televendas
+2026-01-23 23:54:43,710 - INFO - Imagem encontrada via img[src*="mlcdn.com.br"]: https://wx.mlcdn.com.br/site/desk/header/lu-logo-avatar.png
+2026-01-23 23:54:43,711 - INFO - Scraping Magazine Luiza - Título: False, Preço: False, Imagem: True
+2026-01-23 23:54:43,711 - WARNING - Scraping Magazine Luiza parcial ou falhou
+2026-01-23 23:54:43,711 - INFO - 127.0.0.1 - - [23/Jan/2026 23:54:43] "POST /scrape HTTP/1.1" 200 -
