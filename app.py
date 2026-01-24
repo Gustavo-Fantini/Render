@@ -361,11 +361,11 @@ class FreeIslandScraper:
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             self.driver.get(url)
-            time.sleep(8)  # Mais tempo para carregar páginas de divulgador
+            time.sleep(10)  # Mais tempo para carregar páginas de divulgador
             
             # Esperar carregamento completo
             try:
-                WebDriverWait(self.driver, 15).until(
+                WebDriverWait(self.driver, 20).until(
                     lambda driver: driver.execute_script("return document.readyState") == "complete"
                 )
             except TimeoutException:
@@ -375,30 +375,93 @@ class FreeIslandScraper:
             current_url = self.driver.current_url
             logger.info(f"URL atual após carregamento: {current_url}")
             
-            # Tentar encontrar botões ou links que levam ao produto
+            # Estratégia múltipla para encontrar o produto
+            product_found = False
+            
+            # 1. Tentar encontrar botões ou links que levam ao produto
             try:
-                # Procurar por botões "Ver produto" ou similares
-                product_buttons = self.driver.find_elements(By.CSS_SELECTOR, 
-                    'a[data-testid="button-container"], .btn, button, a[href*="magazineluiza.com.br/p/"]')
+                button_selectors = [
+                    'a[data-testid="button-container"]',
+                    '.btn',
+                    'button',
+                    'a[href*="magazineluiza.com.br/p/"]',
+                    'a[href*="magalu.com.br/p/"]',
+                    '[data-testid*="button"]',
+                    '.button',
+                    'a[class*="button"]',
+                    'a[class*="comprar"]',
+                    'a[class*="product"]'
+                ]
                 
-                if product_buttons:
-                    for button in product_buttons:
-                        try:
-                            href = button.get_attribute('href')
-                            if href and 'magazineluiza.com.br' in href:
-                                logger.info(f"Encontrado link do produto: {href}")
-                                self.driver.get(href)
-                                time.sleep(5)
-                                break
-                        except:
-                            continue
+                for selector in button_selectors:
+                    try:
+                        product_buttons = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        logger.info(f"Selector '{selector}' encontrou {len(product_buttons)} botões")
+                        
+                        for button in product_buttons:
+                            try:
+                                href = button.get_attribute('href')
+                                text = button.text.strip().lower()
+                                
+                                if href and ('magazineluiza.com.br' in href or 'magalu.com.br' in href):
+                                    logger.info(f"Encontrado link do produto: {href}")
+                                    self.driver.get(href)
+                                    time.sleep(5)
+                                    product_found = True
+                                    break
+                                elif text and ('ver' in text or 'comprar' in text or 'produto' in text):
+                                    href = button.get_attribute('href')
+                                    if href:
+                                        logger.info(f"Botão com texto '{text}' levando para: {href}")
+                                        self.driver.get(href)
+                                        time.sleep(5)
+                                        product_found = True
+                                        break
+                            except:
+                                continue
+                        if product_found:
+                            break
+                    except Exception as e:
+                        logger.debug(f"Erro com selector '{selector}': {e}")
+                        continue
             except Exception as e:
                 logger.debug(f"Erro ao procurar botões de produto: {e}")
             
+            # 2. Se não encontrou botões, tentar encontrar links diretos na página
+            if not product_found:
+                try:
+                    all_links = self.driver.find_elements(By.TAG_NAME, 'a')
+                    logger.info(f"Verificando {len(all_links)} links na página...")
+                    
+                    for link in all_links:
+                        try:
+                            href = link.get_attribute('href')
+                            if href and ('magazineluiza.com.br/p/' in href or 'magalu.com.br/p/' in href):
+                                logger.info(f"Link direto do produto encontrado: {href}")
+                                self.driver.get(href)
+                                time.sleep(5)
+                                product_found = True
+                                break
+                        except:
+                            continue
+                except Exception as e:
+                    logger.debug(f"Erro ao procurar links diretos: {e}")
+            
             data = {'url': url}
             
-            # Título - mais seletores para páginas de divulgador
+            # Título - seletores abrangentes para qualquer página do Magazine Luiza
             title_selectors = [
+                # Página de produto
+                'h1[data-testid="heading-product-title"]',
+                'h2[data-testid="heading-product-title"]',
+                '[data-testid="product-title"]',
+                '[data-testid="heading-product"]',
+                '.product-title',
+                '.product-name',
+                'h1.product-title',
+                'h2.product-title',
+                
+                # Página de divulgador
                 'h2[data-testid="heading"]',
                 'h1[data-testid="heading"]',
                 '.text-on-surface-2.font-xsm-regular',
@@ -409,18 +472,20 @@ class FreeIslandScraper:
                 'h2.text-on-surface-2',
                 'h1.text-on-surface-2',
                 '.break-words.text-on-surface-2',
+                
+                # Genéricos
                 '[class*="heading"]',
-                'h2',  # Fallback genérico
-                'h1',  # Fallback genérico
-                'title',  # Tag title
-                'div[class*="title"]',  # Div com title
-                'span[class*="title"]',  # Span com title
-                'p[class*="title"]',  # P com title
-                '[class*="product"]',  # Qualquer elemento com product
-                '[class*="name"]',  # Qualquer elemento com name
-                'div',  # Último recurso - pegar primeira div com texto
-                'span',  # Último recurso - pegar primeiro span
-                'p'  # Último recurso - pegar primeiro p
+                '[class*="title"]',
+                '[class*="product"]',
+                '[class*="name"]',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'title',  # Tag title do HTML
+                'div[class*="title"]',
+                'span[class*="title"]',
+                'p[class*="title"]',
+                'div',  # Último recurso
+                'span',
+                'p'
             ]
             
             logger.info(f"URL atual: {self.driver.current_url}")
@@ -446,22 +511,37 @@ class FreeIslandScraper:
             if 'title' not in data:
                 logger.warning("Título não encontrado com nenhum selector")
             
-            # Preço - mais seletivos para páginas de divulgador
+            # Preço - seletores abrangentes para qualquer página do Magazine Luiza
             price_selectors = [
+                # Página de produto
                 'p[data-testid="price-value"]',
+                '[data-testid="price-value"]',
+                '[data-testid="price"]',
+                '[data-testid="price-current"]',
+                '.price-current',
+                '.price-value',
+                '.product-price',
+                '.price',
+                'span.price-current',
+                'p.price-current',
+                
+                # Página de divulgador
                 '.text-on-surface-2.font-xlg-bold',
                 '.text-on-surface-2.font-2xlg-bold',
-                '[data-testid="price-value"]',
                 '.font-xlg-bold.text-on-surface-2',
                 '.font-2xlg-bold.text-on-surface-2',
                 'p.text-on-surface-2',
                 'span.text-on-surface-2',
+                
+                # Genéricos
                 '[class*="price"]',
                 '[data-testid*="price"]',
+                '[class*="valor"]',
+                '[class*="money"]',
                 '.font-xlg-bold',
                 '.font-2xlg-bold',
-                'p',  # Fallback genérico
-                'span' # Fallback genérico
+                '.font-bold',
+                'p', 'span', 'div', 'strong'
             ]
             
             logger.info("Procurando preço...")
@@ -489,18 +569,41 @@ class FreeIslandScraper:
             if 'price' not in data:
                 logger.warning("Preço não encontrado com nenhum selector")
             
-            # Imagem - mais seletivos
+            # Imagem - seletores abrangentes para qualquer página do Magazine Luiza
             image_selectors = [
+                # Página de produto
                 'img[data-testid="image"]',
-                'img[alt*="Imagem do produto"]',
-                'img[src*="mlcdn.com.br"]',
-                'img[src*="magazineluiza.com.br"]',
-                'img[decoding="auto"]',
                 '[data-testid="image"]',
-                'img[src*="wx.mlcdn.com.br"]',
+                'img[data-testid="product-image"]',
+                '[data-testid="product-image"]',
+                '.product-image',
+                '.product-picture',
+                '.gallery-image',
+                'img.product-image',
+                
+                # Página de divulgador
+                'img[alt*="Imagem do produto"]',
+                'img[alt*="imagem do produto"]',
                 'img[alt*="produto"]',
                 'img[alt*="Produto"]',
+                'img[decoding="auto"]',
+                
+                # Domínios específicos
+                'img[src*="mlcdn.com.br"]',
+                'img[src*="wx.mlcdn.com.br"]',
+                'img[src*="magazineluiza.com.br"]',
+                'img[src*="magalu.com.br"]',
+                
+                # Genéricos
                 'img[src*="http"]',
+                'img[src*="https"]',
+                'img[src*="cdn"]',
+                'img[src*="image"]',
+                'img[src*="img"]',
+                'img[alt*="Imagem"]',
+                'img[alt*="imagem"]',
+                'img[alt*="Foto"]',
+                'img[alt*="foto"]',
                 'img'  # Fallback genérico
             ]
             
@@ -649,20 +752,22 @@ class FreeIslandScraper:
             title = product_data.get('title', 'Produto não encontrado')
             price = product_data.get('price', 'Preço não encontrado')
             
-            message = f"🔥 *OFERTA IMPERDÍVEL!* 🔥\n\n"
-            message += f"📦 *Produto:* {title}\n"
-            message += f"💰 *Preço:* {price}\n"
+            message = f"🔥🔥 *SUPER OFERTA EXCLUSIVA!* 🔥🔥\n\n"
+            message += f"�️ *PRODUTO:* {title}\n\n"
+            message += f"� *PREÇO ESPECIAL:* {price}\n"
             
             if free_shipping:
-                message += f"🚚 *Frete Grátis* para todo o Brasil!\n"
+                message += f"🚚 *FRETE GRÁTIS* para todo Brasil! 🇧🇷\n"
             
             if coupon_name and coupon_discount:
-                message += f"🎫 *Cupom:* {coupon_name} - {coupon_discount}% OFF\n"
+                message += f"�️ *CUPOM EXTRA:* {coupon_name} - {coupon_discount}% DE DESCONTO!\n"
             
-            message += f"\n⚡ *Aproveite esta oferta antes que acabe!* ⚡\n\n"
-            message += f"👉 *Confira aqui:* {product_data.get('url', '')}\n\n"
-            message += f"🌟 *Free Island - As melhores promoções você encontra aqui!* 🌟\n"
-            message += f"🔗 *Meu Linktree:* {LINKTREE_URL}"
+            message += f"\n⏰ *CORRA! OFERTA POR TEMPO LIMITADO!* ⏰\n\n"
+            message += f"� *GARANTA JÁ O SEU:* 👇\n"
+            message += f"{product_data.get('url', '')}\n\n"
+            message += f"�️ *Free Island - As melhores ofertas da internet!* �️\n"
+            message += f"🔗 *Mais promoções:* {LINKTREE_URL}\n\n"
+            message += f"✨ *Aproveite! Compre agora e economize muito!* ✨"
             
             return message
             
