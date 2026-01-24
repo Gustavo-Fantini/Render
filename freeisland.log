@@ -349,3 +349,43 @@
 2026-01-23 23:59:12,469 - INFO - 127.0.0.1 - - [23/Jan/2026 23:59:12] "POST /scrape HTTP/1.1" 200 -
 2026-01-24 00:00:11,740 - INFO - Produto salvo no Supabase com sucesso
 2026-01-24 00:00:11,742 - INFO - 127.0.0.1 - - [24/Jan/2026 00:00:11] "POST /save HTTP/1.1" 200 -
+2026-01-24 00:01:21,531 - INFO - 127.0.0.1 - - [24/Jan/2026 00:01:21] "GET /dashboard HTTP/1.1" 200 -
+2026-01-24 00:01:21,578 - INFO - 127.0.0.1 - - [24/Jan/2026 00:01:21] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-24 00:01:27,270 - INFO - Verificando URL: https://mercadolivre.com/sec/2gPtx7v
+2026-01-24 00:01:27,270 - INFO - Domínio extraído: mercadolivre.com
+2026-01-24 00:01:27,270 - INFO - URL completa: https://mercadolivre.com/sec/2gptx7v
+2026-01-24 00:01:27,271 - INFO - Site identificado: mercadolivre
+2026-01-24 00:01:27,271 - INFO - Acessando Mercado Livre: https://mercadolivre.com/sec/2gPtx7v
+2026-01-24 00:01:31,080 - INFO - Título encontrado: Ventilador De Mesa 30cm Super Power Mondial 60w Vsp-30-b 30 Cm Preto 127v Prata Polipropileno 6
+2026-01-24 00:01:31,098 - INFO - Processando preço: '116'
+2026-01-24 00:01:31,098 - INFO - Preço processado: 116 -> R$ 116,00
+2026-01-24 00:01:31,098 - INFO - Preço encontrado: 116 -> R$ 116,00
+2026-01-24 00:01:31,113 - INFO - Imagem encontrada: https://http2.mlstatic.com/D_Q_NP_2X_620576-MLA99958768953_112025-V.webp
+2026-01-24 00:01:31,113 - INFO - 127.0.0.1 - - [24/Jan/2026 00:01:31] "POST /scrape HTTP/1.1" 200 -
+2026-01-24 00:01:58,065 - INFO - Verificando URL: https://mercadolivre.com/sec/2gPtx7v
+2026-01-24 00:01:58,065 - INFO - Domínio extraído: mercadolivre.com
+2026-01-24 00:01:58,066 - INFO - URL completa: https://mercadolivre.com/sec/2gptx7v
+2026-01-24 00:01:58,066 - INFO - Site identificado: mercadolivre
+2026-01-24 00:01:58,066 - INFO - Acessando Mercado Livre: https://mercadolivre.com/sec/2gPtx7v
+2026-01-24 00:02:01,868 - INFO - Título encontrado: Ventilador De Mesa 30cm Super Power Mondial 60w Vsp-30-b 30 Cm Preto 127v Prata Polipropileno 6
+2026-01-24 00:02:01,883 - INFO - Processando preço: '116'
+2026-01-24 00:02:01,884 - INFO - Preço processado: 116 -> R$ 116,00
+2026-01-24 00:02:01,884 - INFO - Preço encontrado: 116 -> R$ 116,00
+2026-01-24 00:02:01,897 - INFO - Imagem encontrada: https://http2.mlstatic.com/D_Q_NP_2X_620576-MLA99958768953_112025-V.webp
+2026-01-24 00:02:01,897 - INFO - 127.0.0.1 - - [24/Jan/2026 00:02:01] "POST /scrape HTTP/1.1" 200 -
+2026-01-24 00:02:33,039 - INFO - Verificando URL: https://amzn.to/4k15Wqb
+2026-01-24 00:02:33,039 - INFO - Domínio extraído: amzn.to
+2026-01-24 00:02:33,039 - INFO - URL completa: https://amzn.to/4k15wqb
+2026-01-24 00:02:33,039 - INFO - Site identificado: amazon
+2026-01-24 00:02:33,039 - INFO - Acessando Amazon: https://amzn.to/4k15Wqb
+2026-01-24 00:02:38,688 - INFO - Título encontrado: Headset Gamer Redragon Zeus Pro Preto Sem Fio 7.1 H510-PRO
+2026-01-24 00:02:38,709 - INFO - Processando preço: 'R$388
+22'
+2026-01-24 00:02:38,709 - INFO - Preço Amazon corrigido (quebra linha): R$388
+22 -> 388.22
+2026-01-24 00:02:38,709 - INFO - Preço processado: R$388
+22 -> R$ 388,22
+2026-01-24 00:02:38,709 - INFO - Preço encontrado: R$388
+22 -> R$ 388,22
+2026-01-24 00:02:38,728 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/619T-Fp+EkL._AC_SX679_.jpg
+2026-01-24 00:02:38,730 - INFO - 127.0.0.1 - - [24/Jan/2026 00:02:38] "POST /scrape HTTP/1.1" 200 -

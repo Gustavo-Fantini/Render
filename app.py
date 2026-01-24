@@ -13,6 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
+import undetected_chromedriver as uc
+import os
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -63,22 +65,54 @@ class FreeIslandScraper:
         self.setup_driver()
     
     def setup_driver(self):
-        """Configura o Selenium WebDriver"""
-        options = Options()
-        options.add_argument('--headless')  # Executar em modo headless
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=1920,1080')
-        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        """Configura o Selenium WebDriver para deploy no Render"""
+        # Verificar se está em ambiente de produção (Render)
+        is_production = os.environ.get('RENDER') == 'true'
         
-        try:
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=options)
-            logger.info("WebDriver inicializado com sucesso")
-        except Exception as e:
-            logger.error(f"Erro ao inicializar WebDriver: {e}")
-            raise
+        if is_production:
+            # Configuração para Render
+            options = Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--window-size=1920,1080')
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-plugins')
+            options.add_argument('--disable-images')
+            options.add_argument('--disable-javascript')
+            options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            try:
+                # Tentar usar undetected-chromedriver primeiro
+                self.driver = uc.Chrome(options=options, version_main=None)
+                logger.info("WebDriver (undetected) inicializado com sucesso no Render")
+            except Exception as e:
+                logger.warning(f"Undetected Chrome falhou: {e}")
+                try:
+                    # Fallback para Chrome normal
+                    self.driver = webdriver.Chrome(options=options)
+                    logger.info("WebDriver (normal) inicializado com sucesso no Render")
+                except Exception as e2:
+                    logger.error(f"Todos os drivers falharam: {e2}")
+                    self.driver = None
+        else:
+            # Configuração para desenvolvimento local
+            options = Options()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--window-size=1920,1080')
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            try:
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=options)
+                logger.info("WebDriver inicializado com sucesso localmente")
+            except Exception as e:
+                logger.error(f"Erro ao inicializar WebDriver local: {e}")
+                self.driver = None
     
     def identify_site(self, url):
         """Identifica o site pela URL"""
@@ -684,22 +718,35 @@ class FreeIslandScraper:
             title = product_data.get('title', 'Produto não encontrado')
             price = product_data.get('price', 'Preço não encontrado')
             
-            message = f"🔥🔥 *SUPER OFERTA EXCLUSIVA!* 🔥🔥\n\n"
-            message += f"🛍️ *PRODUTO:* {title}\n\n"
-            message += f"💎 *PREÇO ESPECIAL:* {price}\n"
+            # Usar strings Unicode diretas para garantir emojis
+            fire = "🔥"
+            shopping = "🛍️"
+            diamond = "💎"
+            truck = "🚚"
+            brazil = "🇧🇷"
+            ticket = "🎟️"
+            clock = "⏰"
+            finger = "👇"
+            island = "🏝️"
+            link = "🔗"
+            sparkles = "✨"
+            
+            message = f"{fire}{fire} *SUPER OFERTA EXCLUSIVA!* {fire}{fire}\n\n"
+            message += f"{shopping} *PRODUTO:* {title}\n\n"
+            message += f"{diamond} *PREÇO ESPECIAL:* {price}\n"
             
             if free_shipping:
-                message += f"🚚 *FRETE GRÁTIS* para todo Brasil! 🇧🇷\n"
+                message += f"{truck} *FRETE GRÁTIS* para todo Brasil! {brazil}\n"
             
             if coupon_name and coupon_discount:
-                message += f"🎟️ *CUPOM EXTRA:* {coupon_name} - {coupon_discount}% DE DESCONTO!\n"
+                message += f"{ticket} *CUPOM EXTRA:* {coupon_name} - {coupon_discount}% DE DESCONTO!\n"
             
-            message += f"\n⏰ *CORRA! OFERTA POR TEMPO LIMITADO!* ⏰\n\n"
-            message += f"👇 *GARANTA JÁ O SEU:* 👇\n"
+            message += f"\n{clock} *CORRA! OFERTA POR TEMPO LIMITADO!* {clock}\n\n"
+            message += f"{finger} *GARANTA JÁ O SEU:* {finger}\n"
             message += f"{product_data.get('url', '')}\n\n"
-            message += f"🏝️ *Free Island - As melhores ofertas da internet!* 🏝️\n"
-            message += f"🔗 *Mais promoções:* {LINKTREE_URL}\n\n"
-            message += f"✨ *Aproveite! Compre agora e economize muito!* ✨"
+            message += f"{island} *Free Island - As melhores ofertas da internet!* {island}\n"
+            message += f"{link} *Mais promoções:* {LINKTREE_URL}\n\n"
+            message += f"{sparkles} *Aproveite! Compre agora e economize muito!* {sparkles}"
             
             return message
             
