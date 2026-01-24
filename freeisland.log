@@ -237,3 +237,30 @@
 2026-01-23 23:06:41,628 - INFO - URL completa: https://amzn.to/4juzhsz
 2026-01-23 23:06:41,628 - INFO - Site identificado: amazon
 2026-01-23 23:06:41,629 - INFO - Acessando Amazon: https://amzn.to/4jUzhSZ
+2026-01-23 23:06:47,447 - INFO - Título encontrado: Teclado mecânico para jogos DAIDAI×AJAZZ AK820 75% com junta, fio e botão de volume - LED virado para o sul - Teclas PBT - Teclado RGB de troca rápida programável
+2026-01-23 23:06:47,485 - INFO - Processando preço: 'R$432
+95'
+2026-01-23 23:06:47,485 - INFO - Preço Amazon corrigido (quebra linha): R$432
+95 -> 432.95
+2026-01-23 23:06:47,486 - INFO - Preço processado: R$432
+95 -> R$ 432,95
+2026-01-23 23:06:47,486 - INFO - Preço encontrado: R$432
+95 -> R$ 432,95
+2026-01-23 23:06:47,519 - INFO - Imagem encontrada: https://m.media-amazon.com/images/I/612fnwTcoDL._AC_SX679_.jpg
+2026-01-23 23:06:47,520 - INFO - 127.0.0.1 - - [23/Jan/2026 23:06:47] "POST /scrape HTTP/1.1" 200 -
+2026-01-23 23:07:02,194 - INFO - Produto salvo no Supabase com sucesso
+2026-01-23 23:07:02,196 - INFO - 127.0.0.1 - - [23/Jan/2026 23:07:02] "POST /save HTTP/1.1" 200 -
+2026-01-23 23:45:53,712 - INFO - 127.0.0.1 - - [23/Jan/2026 23:45:53] "GET /dashboard HTTP/1.1" 200 -
+2026-01-23 23:45:53,801 - INFO - 127.0.0.1 - - [23/Jan/2026 23:45:53] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2026-01-23 23:45:58,324 - INFO - Verificando URL: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 23:45:58,324 - INFO - Domínio extraído: divulgador.magalu.com
+2026-01-23 23:45:58,325 - INFO - URL completa: https://divulgador.magalu.com/hgiwdrdb
+2026-01-23 23:45:58,325 - INFO - Magazine Luiza detectado: divulgador.magalu.com
+2026-01-23 23:45:58,325 - INFO - Site identificado: magazineluiza
+2026-01-23 23:45:58,326 - INFO - Acessando Magazine Luiza: https://divulgador.magalu.com/HgiwdRDB
+2026-01-23 23:46:07,505 - INFO - URL atual após carregamento: https://www.magazineluiza.com.br/smartphone-samsung-galaxy-a16-128gb-cinza-5g-4gb-ram-67-fhd-cam-tripla-ate-50mp-selfie-13mp-bateria-5000mah/divulgador/oferta/238898400/te/ga16/?promoter_id=5334500&partner_id=3440
+2026-01-23 23:46:07,587 - INFO - Encontrado link do produto: https://atendimento.magazineluiza.com.br/hc/pt-br?open=chat_televendas
+2026-01-23 23:47:29,723 - INFO - Imagem encontrada via img[src*="mlcdn.com.br"]: https://wx.mlcdn.com.br/site/desk/header/lu-logo-avatar.png
+2026-01-23 23:47:29,723 - INFO - Scraping Magazine Luiza - Título: False, Preço: False, Imagem: True
+2026-01-23 23:47:29,723 - WARNING - Scraping Magazine Luiza parcial ou falhou
+2026-01-23 23:47:29,723 - INFO - 127.0.0.1 - - [23/Jan/2026 23:47:29] "POST /scrape HTTP/1.1" 200 -

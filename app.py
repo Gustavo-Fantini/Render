@@ -361,11 +361,11 @@ class FreeIslandScraper:
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             self.driver.get(url)
-            time.sleep(10)  # Mais tempo para carregar páginas de divulgador
+            time.sleep(3)  # Reduzido para 3 segundos - mais rápido
             
-            # Esperar carregamento completo
+            # Esperar carregamento completo com timeout menor
             try:
-                WebDriverWait(self.driver, 20).until(
+                WebDriverWait(self.driver, 10).until(
                     lambda driver: driver.execute_script("return document.readyState") == "complete"
                 )
             except TimeoutException:
@@ -406,7 +406,7 @@ class FreeIslandScraper:
                                 if href and ('magazineluiza.com.br' in href or 'magalu.com.br' in href):
                                     logger.info(f"Encontrado link do produto: {href}")
                                     self.driver.get(href)
-                                    time.sleep(5)
+                                    time.sleep(2)
                                     product_found = True
                                     break
                                 elif text and ('ver' in text or 'comprar' in text or 'produto' in text):
@@ -414,7 +414,7 @@ class FreeIslandScraper:
                                     if href:
                                         logger.info(f"Botão com texto '{text}' levando para: {href}")
                                         self.driver.get(href)
-                                        time.sleep(5)
+                                        time.sleep(2)
                                         product_found = True
                                         break
                             except:
@@ -449,10 +449,13 @@ class FreeIslandScraper:
             
             data = {'url': url}
             
-            # Título - seletores abrangentes para qualquer página do Magazine Luiza
+            # Título - seletores baseados no HTML real 2026
             title_selectors = [
-                # Página de produto
+                # HTML real fornecido - prioridade máxima
                 'h1[data-testid="heading-product-title"]',
+                'h1.sc-dcJsrY.jjGTqv',  # Classe específica do HTML
+                
+                # Página de produto
                 'h2[data-testid="heading-product-title"]',
                 '[data-testid="product-title"]',
                 '[data-testid="heading-product"]',
@@ -511,10 +514,15 @@ class FreeIslandScraper:
             if 'title' not in data:
                 logger.warning("Título não encontrado com nenhum selector")
             
-            # Preço - seletores abrangentes para qualquer página do Magazine Luiza
+            # Preço - seletores baseados no HTML real 2026
             price_selectors = [
-                # Página de produto
+                # HTML real fornecido - prioridade máxima
                 'p[data-testid="price-value"]',
+                'p.sc-dcJsrY.hsCKLu.sc-cXPBUD.kYFKbo',  # Classe específica do HTML
+                'p[data-testid="price-original"]',
+                'p.sc-dcJsrY.cHdUaZ.sc-cezyBN.kwGnVt',  # Preço original
+                
+                # Página de produto
                 '[data-testid="price-value"]',
                 '[data-testid="price"]',
                 '[data-testid="price-current"]',
@@ -569,8 +577,14 @@ class FreeIslandScraper:
             if 'price' not in data:
                 logger.warning("Preço não encontrado com nenhum selector")
             
-            # Imagem - seletores abrangentes para qualquer página do Magazine Luiza
+            # Imagem - seletores baseados no HTML real 2026
             image_selectors = [
+                # HTML real fornecido - prioridade máxima
+                'img[data-testid="image-selected-thumbnail"]',
+                'img.sc-hzhJZQ.knorgy',  # Classe específica do HTML
+                'img[data-testid="media-gallery-image"]',
+                'img.sc-hzhJZQ.dCUEWm',  # Classe específica do HTML
+                
                 # Página de produto
                 'img[data-testid="image"]',
                 '[data-testid="image"]',
@@ -593,6 +607,7 @@ class FreeIslandScraper:
                 'img[src*="wx.mlcdn.com.br"]',
                 'img[src*="magazineluiza.com.br"]',
                 'img[src*="magalu.com.br"]',
+                'img[src*="a-static.mlcdn.com.br"]',  # Do HTML real
                 
                 # Genéricos
                 'img[src*="http"]',
@@ -652,7 +667,7 @@ class FreeIslandScraper:
         try:
             logger.info(f"Acessando Shopee: {url}")
             self.driver.get(url)
-            time.sleep(5)  # Shopee precisa de mais tempo
+            time.sleep(2)
             
             data = {'url': url}
             
