@@ -353,7 +353,7 @@ class FreeIslandScraper:
             return {'error': str(e), 'url': url}
     
     def scrape_magazineluiza(self, url):
-        """Extrai dados do Magazine Luiza com Selenium"""
+        """Extrai dados do Magazine Luiza com Selenium - Versão Simplificada"""
         try:
             logger.info(f"Acessando Magazine Luiza: {url}")
             
@@ -361,11 +361,11 @@ class FreeIslandScraper:
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             self.driver.get(url)
-            time.sleep(3)  # Reduzido para 3 segundos - mais rápido
+            time.sleep(2)
             
-            # Esperar carregamento completo com timeout menor
+            # Esperar carregamento completo
             try:
-                WebDriverWait(self.driver, 10).until(
+                WebDriverWait(self.driver, 8).until(
                     lambda driver: driver.execute_script("return document.readyState") == "complete"
                 )
             except TimeoutException:
@@ -375,60 +375,11 @@ class FreeIslandScraper:
             current_url = self.driver.current_url
             logger.info(f"URL atual após carregamento: {current_url}")
             
-            # Estratégia múltipla para encontrar o produto
-            product_found = False
-            
-            # 1. Tentar encontrar botões ou links que levam ao produto
-            try:
-                button_selectors = [
-                    'a[data-testid="button-container"]',
-                    '.btn',
-                    'button',
-                    'a[href*="magazineluiza.com.br/p/"]',
-                    'a[href*="magalu.com.br/p/"]',
-                    '[data-testid*="button"]',
-                    '.button',
-                    'a[class*="button"]',
-                    'a[class*="comprar"]',
-                    'a[class*="product"]'
-                ]
-                
-                for selector in button_selectors:
-                    try:
-                        product_buttons = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                        logger.info(f"Selector '{selector}' encontrou {len(product_buttons)} botões")
-                        
-                        for button in product_buttons:
-                            try:
-                                href = button.get_attribute('href')
-                                text = button.text.strip().lower()
-                                
-                                if href and ('magazineluiza.com.br' in href or 'magalu.com.br' in href):
-                                    logger.info(f"Encontrado link do produto: {href}")
-                                    self.driver.get(href)
-                                    time.sleep(2)
-                                    product_found = True
-                                    break
-                                elif text and ('ver' in text or 'comprar' in text or 'produto' in text):
-                                    href = button.get_attribute('href')
-                                    if href:
-                                        logger.info(f"Botão com texto '{text}' levando para: {href}")
-                                        self.driver.get(href)
-                                        time.sleep(2)
-                                        product_found = True
-                                        break
-                            except:
-                                continue
-                        if product_found:
-                            break
-                    except Exception as e:
-                        logger.debug(f"Erro com selector '{selector}': {e}")
-                        continue
-            except Exception as e:
-                logger.debug(f"Erro ao procurar botões de produto: {e}")
-            
-            # 2. Se não encontrou botões, tentar encontrar links diretos na página
-            if not product_found:
+            # Se já está na página do produto, não precisa procurar botões
+            if '/p/' in current_url:
+                logger.info("Já está na página do produto, extraindo dados diretamente...")
+            else:
+                # Procurar por links diretos do produto na página
                 try:
                     all_links = self.driver.find_elements(By.TAG_NAME, 'a')
                     logger.info(f"Verificando {len(all_links)} links na página...")
@@ -436,16 +387,15 @@ class FreeIslandScraper:
                     for link in all_links:
                         try:
                             href = link.get_attribute('href')
-                            if href and ('magazineluiza.com.br/p/' in href or 'magalu.com.br/p/' in href):
-                                logger.info(f"Link direto do produto encontrado: {href}")
+                            if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
+                                logger.info(f"Link do produto encontrado: {href}")
                                 self.driver.get(href)
-                                time.sleep(5)
-                                product_found = True
+                                time.sleep(2)
                                 break
                         except:
                             continue
                 except Exception as e:
-                    logger.debug(f"Erro ao procurar links diretos: {e}")
+                    logger.debug(f"Erro ao procurar links: {e}")
             
             data = {'url': url}
             
@@ -768,19 +718,19 @@ class FreeIslandScraper:
             price = product_data.get('price', 'Preço não encontrado')
             
             message = f"🔥🔥 *SUPER OFERTA EXCLUSIVA!* 🔥🔥\n\n"
-            message += f"�️ *PRODUTO:* {title}\n\n"
-            message += f"� *PREÇO ESPECIAL:* {price}\n"
+            message += f"🛍️ *PRODUTO:* {title}\n\n"
+            message += f"💎 *PREÇO ESPECIAL:* {price}\n"
             
             if free_shipping:
                 message += f"🚚 *FRETE GRÁTIS* para todo Brasil! 🇧🇷\n"
             
             if coupon_name and coupon_discount:
-                message += f"�️ *CUPOM EXTRA:* {coupon_name} - {coupon_discount}% DE DESCONTO!\n"
+                message += f"🎟️ *CUPOM EXTRA:* {coupon_name} - {coupon_discount}% DE DESCONTO!\n"
             
             message += f"\n⏰ *CORRA! OFERTA POR TEMPO LIMITADO!* ⏰\n\n"
-            message += f"� *GARANTA JÁ O SEU:* 👇\n"
+            message += f"👇 *GARANTA JÁ O SEU:* 👇\n"
             message += f"{product_data.get('url', '')}\n\n"
-            message += f"�️ *Free Island - As melhores ofertas da internet!* �️\n"
+            message += f"🏝️ *Free Island - As melhores ofertas da internet!* 🏝️\n"
             message += f"🔗 *Mais promoções:* {LINKTREE_URL}\n\n"
             message += f"✨ *Aproveite! Compre agora e economize muito!* ✨"
             
