@@ -192,6 +192,8 @@ class FreeIslandScraper:
         
         # Limpar caracteres não numéricos, mantendo vírgula e ponto
         clean = re.sub(r'[^\d.,]', '', normalized)
+        # Evitar duplicações de separadores (ex: "3.913,,05")
+        clean = re.sub(r'[.,]{2,}', lambda m: m.group(0)[0], clean)
         
         if not clean:
             return original, None
@@ -342,7 +344,7 @@ class FreeIslandScraper:
                     fraction = element.find_elements(By.CSS_SELECTOR, '.a-price-fraction')
                     if whole:
                         symbol_text = symbol[0].text.strip() if symbol else 'R$'
-                        whole_text = whole[0].text.strip()
+                        whole_text = whole[0].text.strip().rstrip(',.')
                         fraction_text = fraction[0].text.strip() if fraction else ''
                         if whole_text:
                             price_text = f"{symbol_text} {whole_text}"
@@ -412,7 +414,7 @@ class FreeIslandScraper:
                 fraction = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-fraction') or soup.select_one('.a-price-fraction')
                 if whole:
                     symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
-                    whole_text = whole.get_text(strip=True)
+                    whole_text = whole.get_text(strip=True).rstrip(',.')
                     fraction_text = fraction.get_text(strip=True) if fraction else ''
                     price_text = f"{symbol_text} {whole_text}"
                     if fraction_text:
