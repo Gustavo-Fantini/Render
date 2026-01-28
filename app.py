@@ -176,6 +176,87 @@ class FreeIslandScraper:
         
         if not clean:
             return original, None
+
+    def ensure_driver(self):
+        """Garante que o WebDriver esteja pronto para uso"""
+        if self.driver is None:
+            self.setup_driver()
+        return self.driver is not None
+
+    def wait_ready(self, timeout=10):
+        """Aguarda o carregamento básico da página"""
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
+            )
+        except TimeoutException:
+            logger.warning("Timeout aguardando document.readyState, continuando...")
+
+    def first_text_by_selectors(self, selectors, min_len=1):
+        """Retorna o primeiro texto encontrado para a lista de seletores"""
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    text = element.text.strip()
+                    if text and len(text) >= min_len:
+                        return text
+            except Exception:
+                continue
+        return None
+
+    def first_attr_by_selectors(self, selectors, attrs=("src", "data-src", "data-old-hires", "data-a-hires")):
+        """Retorna o primeiro atributo válido encontrado para a lista de seletores"""
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    for attr in attrs:
+                        val = element.get_attribute(attr)
+                        if val and 'http' in val:
+                            return val
+            except Exception:
+                continue
+        return None
+
+    def extract_amazon_price(self):
+        """Extrai preço Amazon usando combinações de seletores mais estáveis"""
+        # 1) Preço offscreen (quando disponível)
+        offscreen_text = self.first_text_by_selectors([
+            '#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen',
+            '.a-price .aok-offscreen',
+            '.a-price .a-offscreen'
+        ], min_len=2)
+        if offscreen_text:
+            return offscreen_text
+
+        # 2) Montar preço por partes (símbolo + inteiro + fração)
+        containers = [
+            '#corePriceDisplay_desktop_feature_div .a-price.priceToPay',
+            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            '.apexPriceToPay .a-price',
+            '.a-price'
+        ]
+        for selector in containers:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    symbol = element.find_elements(By.CSS_SELECTOR, '.a-price-symbol')
+                    whole = element.find_elements(By.CSS_SELECTOR, '.a-price-whole')
+                    fraction = element.find_elements(By.CSS_SELECTOR, '.a-price-fraction')
+                    if whole:
+                        symbol_text = symbol[0].text.strip() if symbol else 'R$'
+                        whole_text = whole[0].text.strip()
+                        fraction_text = fraction[0].text.strip() if fraction else ''
+                        if whole_text:
+                            price_text = f"{symbol_text} {whole_text}"
+                            if fraction_text:
+                                price_text += f",{fraction_text}"
+                            return price_text
+            except Exception:
+                continue
+
+        return None
         
         try:
             # Lógica melhorada para preços brasileiros
@@ -249,77 +330,58 @@ class FreeIslandScraper:
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
         try:
+            if not self.ensure_driver():
+                return {'error': 'WebDriver não inicializado', 'url': url}
+
             logger.info(f"Acessando Amazon: {url}")
+            self.driver.set_page_load_timeout(20)
             self.driver.get(url)
-            time.sleep(3)
+            time.sleep(2)
+            self.wait_ready(timeout=8)
+
+            # Detectar possível captcha/bloqueio
+            try:
+                page_source = self.driver.page_source.lower()
+                if 'captcha' in page_source or 'validatecaptcha' in page_source or 'type the characters you see' in page_source:
+                    return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url}
+            except Exception:
+                pass
             
             data = {'url': url}
             
             # Título
-            title_selectors = [
+            title = self.first_text_by_selectors([
                 '#productTitle',
                 'h1#productTitle',
                 '.a-size-large.product-title-word-break',
                 'h1.a-size-large',
-                'h1[data-asin]'
-            ]
-            
-            for selector in title_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    title = element.text.strip()
-                    if title and len(title) > 5:
-                        data['title'] = title
-                        logger.info(f"Título encontrado: {title}")
-                        break
-                except TimeoutException:
-                    continue
+                'h1[data-asin]',
+                '#title span',
+                '#title'
+            ], min_len=5)
+            if title:
+                data['title'] = title
+                logger.info(f"Título encontrado: {title}")
             
             # Preço
-            price_selectors = [
-                '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
-                '.apexPriceToPay .a-price-whole',
-                '.a-price-current',
-                '.a-price .a-offscreen'
-            ]
-            
-            for selector in price_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    price_text = element.text.strip()
-                    if price_text:
-                        formatted, price_val = self.clean_price(price_text)
-                        if formatted:
-                            data['price'] = formatted
-                            data['price_value'] = price_val
-                            logger.info(f"Preço encontrado: {price_text} -> {formatted}")
-                            break
-                except TimeoutException:
-                    continue
+            price_text = self.extract_amazon_price()
+            if price_text:
+                formatted, price_val = self.clean_price(price_text)
+                if formatted:
+                    data['price'] = formatted
+                    data['price_value'] = price_val
+                    logger.info(f"Preço encontrado: {price_text} -> {formatted}")
             
             # Imagem
-            image_selectors = [
+            img_src = self.first_attr_by_selectors([
                 '#landingImage',
                 '.a-dynamic-image',
-                'img[data-a-hires]'
-            ]
-            
-            for selector in image_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    img_src = element.get_attribute('src') or element.get_attribute('data-src')
-                    if img_src and 'http' in img_src:
-                        data['image_url'] = img_src
-                        logger.info(f"Imagem encontrada: {img_src}")
-                        break
-                except TimeoutException:
-                    continue
+                'img[data-a-hires]',
+                'img[data-old-hires]'
+            ])
+            if img_src:
+                data['image_url'] = img_src
+                logger.info(f"Imagem encontrada: {img_src}")
             
             return data
             
