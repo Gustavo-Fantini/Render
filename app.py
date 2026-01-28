@@ -393,7 +393,7 @@ class FreeIslandScraper:
             )
 
             soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': response.url or url}
+            data = {'url': url, 'resolved_url': response.url or url}
 
             title_el = soup.select_one('#productTitle') or soup.select_one('#title span') or soup.select_one('#title')
             if title_el:
@@ -401,14 +401,15 @@ class FreeIslandScraper:
                 if title:
                     data['title'] = title
 
-            price_el = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen') \
-                or soup.select_one('.a-price .aok-offscreen') \
-                or soup.select_one('.a-price .a-offscreen')
+            price_el = soup.select_one('#corePriceDisplay_desktop_feature_div .priceToPay .aok-offscreen') \
+                or soup.select_one('#corePriceDisplay_desktop_feature_div .priceToPay .a-offscreen') \
+                or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen') \
+                or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .a-offscreen')
             price_text = price_el.get_text(strip=True) if price_el else None
             if not price_text:
-                symbol = soup.select_one('.a-price-symbol')
-                whole = soup.select_one('.a-price-whole')
-                fraction = soup.select_one('.a-price-fraction')
+                symbol = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-symbol') or soup.select_one('.a-price-symbol')
+                whole = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-whole') or soup.select_one('.a-price-whole')
+                fraction = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-fraction') or soup.select_one('.a-price-fraction')
                 if whole:
                     symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
                     whole_text = whole.get_text(strip=True)
@@ -483,7 +484,7 @@ class FreeIslandScraper:
             )
 
             soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': response.url or url}
+            data = {'url': url, 'resolved_url': response.url or url}
 
             title_el = soup.select_one('h1.ui-pdp-title') or soup.select_one('.ui-pdp-title') or soup.select_one('h1')
             if title_el:
@@ -578,7 +579,7 @@ class FreeIslandScraper:
             )
 
             soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': response.url or url}
+            data = {'url': url, 'resolved_url': response.url or url}
 
             title_el = (
                 soup.select_one('meta[property="og:title"]')
@@ -1156,7 +1157,7 @@ class FreeIslandScraper:
             
             message += f"\n{clock} *CORRA! OFERTA POR TEMPO LIMITADO!* {clock}\n\n"
             message += f"{finger} *GARANTA JÁ O SEU:* {finger}\n"
-            message += f"{product_data.get('url', '')}\n\n"
+            message += f"{product_data.get('original_url', product_data.get('url', ''))}\n\n"
             message += f"{island} *Free Island - As melhores ofertas da internet!* {island}\n"
             message += f"{link} *Mais promoções:* {LINKTREE_URL}\n\n"
             message += f"{sparkles} *Aproveite! Compre agora e economize muito!* {sparkles}"
@@ -1267,6 +1268,8 @@ def scrape():
         coupon_name = data.get('coupon_name')
         coupon_discount = data.get('coupon_discount')
         
+        if isinstance(product_data, dict):
+            product_data.setdefault('original_url', url)
         message = scraper.generate_message(
             product_data, 
             free_shipping, 
