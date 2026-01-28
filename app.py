@@ -362,6 +362,17 @@ class FreeIslandScraper:
         if offscreen_text:
             return offscreen_text
 
+        # 4) Fallback final: meta tags (podem existir em alguns layouts)
+        try:
+            meta_price = self.driver.execute_script(
+                "var m = document.querySelector('meta[property=\"product:price:amount\"], meta[property=\"og:price:amount\"]');"
+                "return m ? m.getAttribute('content') : null;"
+            )
+            if meta_price:
+                return f\"R$ {meta_price}\"
+        except Exception:
+            pass
+
         return None
 
     def scrape_amazon_requests(self, url):
@@ -398,6 +409,7 @@ class FreeIslandScraper:
                 "amazon_requests_html_markers",
                 has_product_title=("productTitle" in html),
                 has_core_price=("corePriceDisplay" in html),
+                has_meta_price=('property="product:price:amount"' in html or 'property="og:price:amount"' in html),
                 has_og_image=('property="og:image"' in html),
                 final_url=response.url
             )
@@ -433,6 +445,11 @@ class FreeIslandScraper:
                     or soup.select_one('#apex_desktop #apex_price .a-offscreen')
                 if apex_offscreen:
                     price_text = apex_offscreen.get_text(strip=True)
+            if not price_text:
+                # Fallback final: meta tags
+                meta_price = soup.select_one('meta[property="product:price:amount"]') or soup.select_one('meta[property="og:price:amount"]')
+                if meta_price and meta_price.get('content'):
+                    price_text = f"R$ {meta_price.get('content')}"
 
             if price_text:
                 formatted, price_val = self.clean_price(price_text)
