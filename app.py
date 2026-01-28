@@ -5,6 +5,7 @@ import functools
 import re
 import json
 from datetime import datetime
+import uuid
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -61,6 +62,24 @@ LOGIN_SENHA = get_env('LOGIN_PASSWORD', default='', required=IS_PRODUCTION)
 
 # Linktree
 LINKTREE_URL = "https://linktr.ee/freeisland"
+
+# Código de erro padronizado para resposta e logs
+def error_response(code, message, http_status=500, details=None, request_id=None):
+    payload = {
+        "error_code": code,
+        "error": message,
+        "request_id": request_id
+    }
+    if details:
+        payload["details"] = details
+    return payload, http_status
+
+def log_event(level, message, **fields):
+    # Log estruturado simples para facilitar diagnóstico no Render
+    entry = {"message": message}
+    if fields:
+        entry["fields"] = fields
+    logger.log(level, json.dumps(entry, ensure_ascii=False))
 
 def login_required(f):
     @functools.wraps(f)
@@ -267,15 +286,25 @@ class FreeIslandScraper:
             "Connection": "close"
         }
         try:
+            start = time.time()
             response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            elapsed_ms = int((time.time() - start) * 1000)
+            log_event(
+                logging.INFO,
+                "amazon_requests_response",
+                status=response.status_code,
+                elapsed_ms=elapsed_ms,
+                final_url=response.url,
+                content_length=len(response.text or "")
+            )
             if response.status_code != 200:
-                logger.warning(f"Requests Amazon status {response.status_code}")
+                log_event(logging.WARNING, "amazon_requests_non_200", status=response.status_code, final_url=response.url)
                 return None
 
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
-                logger.warning("Requests Amazon bloqueado por captcha/robot check")
+                log_event(logging.WARNING, "amazon_requests_blocked", reason="captcha_or_robot_check", final_url=response.url)
                 return None
 
             soup = BeautifulSoup(html, 'html.parser')
@@ -321,10 +350,11 @@ class FreeIslandScraper:
                 data['image_url'] = img_src
 
             if any(data.get(k) for k in ('title', 'price', 'image_url')):
-                logger.info("Dados Amazon via requests extraídos com sucesso")
+                log_event(logging.INFO, "amazon_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
                 return data
+            log_event(logging.WARNING, "amazon_requests_no_data", final_url=response.url)
         except Exception as e:
-            logger.warning(f"Requests Amazon falhou: {e}")
+            log_event(logging.ERROR, "amazon_requests_exception", error=str(e))
 
         return None
         
@@ -406,7 +436,7 @@ class FreeIslandScraper:
                 return requests_data
             if IS_PRODUCTION:
                 # Em produção, evitar Selenium para não gerar timeout/crash do renderer
-                return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url}
+                return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'AMAZON_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url}
@@ -424,7 +454,7 @@ class FreeIslandScraper:
             try:
                 page_source = self.driver.page_source.lower()
                 if 'captcha' in page_source or 'validatecaptcha' in page_source or 'type the characters you see' in page_source:
-                    return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url}
+                    return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
             except Exception:
                 pass
             
@@ -468,7 +498,7 @@ class FreeIslandScraper:
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados da Amazon: {e}")
-            return {'error': str(e), 'url': url}
+            return {'error': str(e), 'url': url, 'error_code': 'AMAZON_SCRAPE_EXCEPTION'}
     
     def scrape_mercadolivre(self, url):
         """Extrai dados do Mercado Livre com Selenium"""
@@ -988,17 +1018,27 @@ def dashboard():
 @login_required
 def scrape():
     try:
+        request_id = str(uuid.uuid4())
+        start = time.time()
         data = request.get_json()
         url = data.get('url')
         
         if not url:
-            return jsonify({'error': 'URL não fornecida'}), 400
+            payload, status = error_response("URL_MISSING", "URL não fornecida", 400, request_id=request_id)
+            return jsonify(payload), status
         
         # Fazer scraping
         product_data = scraper.scrape_product(url)
         
         if 'error' in product_data:
-            return jsonify({'error': product_data['error']}), 500
+            details = {
+                "source": "scrape_product",
+                "site": scraper.identify_site(url),
+                "error_code": product_data.get("error_code")
+            }
+            payload, status = error_response("SCRAPE_FAILED", product_data['error'], 502, details=details, request_id=request_id)
+            log_event(logging.ERROR, "scrape_failed", request_id=request_id, url=url, details=details)
+            return jsonify(payload), status
         
         # Gerar mensagem
         free_shipping = data.get('free_shipping', False)
@@ -1012,15 +1052,19 @@ def scrape():
             coupon_discount
         )
         
+        elapsed_ms = int((time.time() - start) * 1000)
+        log_event(logging.INFO, "scrape_success", request_id=request_id, url=url, elapsed_ms=elapsed_ms)
         return jsonify({
             'product': product_data,
             'message': message,
-            'success': True
+            'success': True,
+            'request_id': request_id
         })
         
     except Exception as e:
-        logger.error(f"Erro no scraping: {e}")
-        return jsonify({'error': str(e)}), 500
+        log_event(logging.ERROR, "scrape_exception", error=str(e))
+        payload, status = error_response("SCRAPE_EXCEPTION", str(e), 500)
+        return jsonify(payload), status
 
 @app.route('/save', methods=['POST'])
 @login_required
