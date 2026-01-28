@@ -404,6 +404,9 @@ class FreeIslandScraper:
             requests_data = self.scrape_amazon_requests(url)
             if requests_data:
                 return requests_data
+            if IS_PRODUCTION:
+                # Em produção, evitar Selenium para não gerar timeout/crash do renderer
+                return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url}
 
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url}
