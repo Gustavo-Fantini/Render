@@ -383,6 +383,14 @@ class FreeIslandScraper:
             if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
                 log_event(logging.WARNING, "amazon_requests_blocked", reason="captcha_or_robot_check", final_url=response.url)
                 return None
+            log_event(
+                logging.INFO,
+                "amazon_requests_html_markers",
+                has_product_title=("productTitle" in html),
+                has_core_price=("corePriceDisplay" in html),
+                has_og_image=('property="og:image"' in html),
+                final_url=response.url
+            )
 
             soup = BeautifulSoup(html, 'html.parser')
             data = {'url': response.url or url}
@@ -464,6 +472,15 @@ class FreeIslandScraper:
             if 'captcha' in lower_html or 'robot' in lower_html:
                 log_event(logging.WARNING, "mercadolivre_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 return None
+            log_event(
+                logging.INFO,
+                "mercadolivre_requests_html_markers",
+                has_ui_pdp_title=("ui-pdp-title" in html),
+                has_meta_price=('itemprop="price"' in html),
+                has_andes_money_amount=("andes-money-amount" in html),
+                has_og_image=('property="og:image"' in html),
+                final_url=response.url
+            )
 
             soup = BeautifulSoup(html, 'html.parser')
             data = {'url': response.url or url}
@@ -547,6 +564,18 @@ class FreeIslandScraper:
             if 'captcha' in lower_html or 'robot' in lower_html:
                 log_event(logging.WARNING, "shopee_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 return None
+            log_event(
+                logging.INFO,
+                "shopee_requests_html_markers",
+                has_vR6K3w=("vR6K3w" in html),
+                has_IZPeQz_B67UQ0=("IZPeQz B67UQ0" in html),
+                has_IZPeQz=("IZPeQz" in html),
+                has_pdp_product_title=('data-testid="pdp-product-title"' in html),
+                has_pdp_price=('data-testid="pdp-price"' in html),
+                has_og_title=('property="og:title"' in html),
+                has_og_image=('property="og:image"' in html),
+                final_url=response.url
+            )
 
             soup = BeautifulSoup(html, 'html.parser')
             data = {'url': response.url or url}
@@ -1244,8 +1273,18 @@ def scrape():
             coupon_name, 
             coupon_discount
         )
-        
+
         elapsed_ms = int((time.time() - start) * 1000)
+        missing_fields = [k for k in ("title", "price", "image_url") if not product_data.get(k)]
+        if missing_fields:
+            log_event(
+                logging.WARNING,
+                "scrape_partial",
+                request_id=request_id,
+                url=url,
+                site=scraper.identify_site(url),
+                missing=missing_fields
+            )
         log_event(logging.INFO, "scrape_success", request_id=request_id, url=url, elapsed_ms=elapsed_ms)
         return jsonify({
             'product': product_data,
