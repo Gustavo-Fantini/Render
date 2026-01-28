@@ -319,21 +319,21 @@ class FreeIslandScraper:
 
     def extract_amazon_price(self):
         """Extrai preço Amazon usando combinações de seletores mais estáveis"""
-        # 1) Preço offscreen (quando disponível)
+        # 1) Preço principal no bloco corePriceDisplay (mais confiável)
         offscreen_text = self.first_text_by_selectors([
+            '#corePriceDisplay_desktop_feature_div .priceToPay .aok-offscreen',
+            '#corePriceDisplay_desktop_feature_div .priceToPay .a-offscreen',
             '#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen',
-            '.a-price .aok-offscreen',
-            '.a-price .a-offscreen'
+            '#corePriceDisplay_desktop_feature_div .a-price .a-offscreen',
         ], min_len=2)
         if offscreen_text:
             return offscreen_text
 
-        # 2) Montar preço por partes (símbolo + inteiro + fração)
+        # 2) Montar preço por partes (símbolo + inteiro + fração) no corePriceDisplay
         containers = [
             '#corePriceDisplay_desktop_feature_div .a-price.priceToPay',
-            '.a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
-            '.apexPriceToPay .a-price',
-            '.a-price'
+            '#corePriceDisplay_desktop_feature_div .a-price.aok-align-center.reinventPricePriceToPayMargin.priceToPay',
+            '#corePriceDisplay_desktop_feature_div .a-price',
         ]
         for selector in containers:
             try:
@@ -353,6 +353,14 @@ class FreeIslandScraper:
                             return price_text
             except Exception:
                 continue
+
+        # 3) Fallback: apex_price (às vezes usado no centro)
+        offscreen_text = self.first_text_by_selectors([
+            '#apex_desktop #apex_price .aok-offscreen',
+            '#apex_desktop #apex_price .a-offscreen',
+        ], min_len=2)
+        if offscreen_text:
+            return offscreen_text
 
         return None
 
@@ -409,9 +417,9 @@ class FreeIslandScraper:
                 or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .a-offscreen')
             price_text = price_el.get_text(strip=True) if price_el else None
             if not price_text:
-                symbol = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-symbol') or soup.select_one('.a-price-symbol')
-                whole = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-whole') or soup.select_one('.a-price-whole')
-                fraction = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-fraction') or soup.select_one('.a-price-fraction')
+                symbol = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-symbol')
+                whole = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-whole')
+                fraction = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-fraction')
                 if whole:
                     symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
                     whole_text = whole.get_text(strip=True).rstrip(',.')
@@ -419,6 +427,12 @@ class FreeIslandScraper:
                     price_text = f"{symbol_text} {whole_text}"
                     if fraction_text:
                         price_text += f",{fraction_text}"
+            if not price_text:
+                # Fallback: apex_price (às vezes aparece no centro do ATF)
+                apex_offscreen = soup.select_one('#apex_desktop #apex_price .aok-offscreen') \
+                    or soup.select_one('#apex_desktop #apex_price .a-offscreen')
+                if apex_offscreen:
+                    price_text = apex_offscreen.get_text(strip=True)
 
             if price_text:
                 formatted, price_val = self.clean_price(price_text)
