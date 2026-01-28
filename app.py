@@ -369,7 +369,7 @@ class FreeIslandScraper:
                 "return m ? m.getAttribute('content') : null;"
             )
             if meta_price:
-                return f\"R$ {meta_price}\"
+                return f"R$ {meta_price}"
         except Exception:
             pass
 
