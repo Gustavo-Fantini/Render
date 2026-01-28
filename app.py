@@ -13,7 +13,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
-import undetected_chromedriver as uc
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -30,14 +29,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+IS_PRODUCTION = os.environ.get('RENDER') == 'true'
+
+def get_env(name, default=None, required=False):
+    value = os.environ.get(name, default)
+    if required and not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
 app = Flask(__name__)
-app.secret_key = 'freeisland_secret_key_2024'
+app.secret_key = get_env('FLASK_SECRET_KEY', default='dev-secret-key', required=IS_PRODUCTION)
 app.config['JSON_AS_ASCII'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if IS_PRODUCTION:
+    app.config['SESSION_COOKIE_SECURE'] = True
 CORS(app)
 
 # Configurações Supabase
-SUPABASE_URL = "https://cnwrcrpihldqejyvgysn.supabase.co"
-SUPABASE_KEY_SERVICE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNud3JjcnBpaGxkcWVqeXZneXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTU5NzM3OSwiZXhwIjoyMDY3MTczMzc5fQ.GdZPPZvSAslVIgzbmq8rhstK94qxh7WUwH623GUvb4g"
+SUPABASE_URL = get_env('SUPABASE_URL', default='', required=IS_PRODUCTION)
+SUPABASE_KEY_SERVICE = get_env('SUPABASE_SERVICE_KEY', default='', required=IS_PRODUCTION)
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY_SERVICE,
     "Authorization": f"Bearer {SUPABASE_KEY_SERVICE}",
@@ -45,8 +56,8 @@ SUPABASE_HEADERS = {
 }
 
 # Credenciais de login
-LOGIN_EMAIL = "gustavo.teodoro.fantini@gmail.com"
-LOGIN_SENHA = "Gustavinho12."
+LOGIN_EMAIL = get_env('LOGIN_EMAIL', default='', required=IS_PRODUCTION)
+LOGIN_SENHA = get_env('LOGIN_PASSWORD', default='', required=IS_PRODUCTION)
 
 # Linktree
 LINKTREE_URL = "https://linktr.ee/freeisland"
@@ -66,10 +77,7 @@ class FreeIslandScraper:
     
     def setup_driver(self):
         """Configura o Selenium WebDriver para deploy no Render"""
-        # Verificar se está em ambiente de produção (Render)
-        is_production = os.environ.get('RENDER') == 'true'
-        
-        if is_production:
+        if IS_PRODUCTION:
             # Configuração para Render
             options = Options()
             options.add_argument('--headless')
@@ -83,12 +91,22 @@ class FreeIslandScraper:
             options.add_argument('--disable-javascript')
             options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
             
+            uc = None
             try:
-                # Tentar usar undetected-chromedriver primeiro
-                self.driver = uc.Chrome(options=options, version_main=None)
-                logger.info("WebDriver (undetected) inicializado com sucesso no Render")
+                import undetected_chromedriver as uc  # Lazy import to avoid distutils issues on newer Python
             except Exception as e:
-                logger.warning(f"Undetected Chrome falhou: {e}")
+                logger.warning(f"Undetected Chrome indisponível: {e}")
+
+            if uc is not None:
+                try:
+                    # Tentar usar undetected-chromedriver primeiro
+                    self.driver = uc.Chrome(options=options, version_main=None)
+                    logger.info("WebDriver (undetected) inicializado com sucesso no Render")
+                except Exception as e:
+                    logger.warning(f"Undetected Chrome falhou: {e}")
+                    self.driver = None
+
+            if self.driver is None:
                 try:
                     # Fallback para Chrome normal
                     self.driver = webdriver.Chrome(options=options)
@@ -757,6 +775,10 @@ class FreeIslandScraper:
     def save_to_supabase(self, product_data, message):
         """Salva no Supabase"""
         try:
+            if not SUPABASE_URL or not SUPABASE_KEY_SERVICE:
+                logger.error("Supabase não configurado no ambiente")
+                return False
+
             payload = {
                 "mensagem": json.dumps(message, ensure_ascii=False),
                 "imagem_url": product_data.get('image_url', ''),
@@ -803,6 +825,10 @@ def auth():
     email = request.form.get('email')
     senha = request.form.get('senha')
     
+    if not LOGIN_EMAIL or not LOGIN_SENHA:
+        logger.error("Credenciais de login não configuradas no ambiente")
+        return render_template('login.html', error='Login indisponível. Configure as credenciais no ambiente.')
+
     if email == LOGIN_EMAIL and senha == LOGIN_SENHA:
         session['user_id'] = email
         session['user_name'] = 'Free Island'

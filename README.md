@@ -49,6 +49,16 @@ A aplicação está configurada para usar:
 - **Selenium**: WebDriver para scraping avançado
 - **Flask**: Framework web
 
+### Variáveis de ambiente obrigatórias
+
+Configure estas variáveis antes de subir para produção (Render):
+
+- `FLASK_SECRET_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+- `LOGIN_EMAIL`
+- `LOGIN_PASSWORD`
+
 ## Deploy
 
 O projeto está configurado para deploy no Render.com com as seguintes configurações:
@@ -70,5 +80,5 @@ O projeto está configurado para deploy no Render.com com as seguintes configura
 ## Segurança
 
 - Login protegido com sessões Flask
-- Credenciais hardcoded no servidor
-- Conexão segura com Supabase usando service-role key
+- Credenciais e chaves via variáveis de ambiente (não versionar)
+- Conexão com Supabase via service-role key configurada no ambiente
