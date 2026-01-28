@@ -257,6 +257,76 @@ class FreeIslandScraper:
                 continue
 
         return None
+
+    def scrape_amazon_requests(self, url):
+        """Extrai dados da Amazon via requests (mais rápido que Selenium)"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            if response.status_code != 200:
+                logger.warning(f"Requests Amazon status {response.status_code}")
+                return None
+
+            html = response.text
+            lower_html = html.lower()
+            if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
+                logger.warning("Requests Amazon bloqueado por captcha/robot check")
+                return None
+
+            soup = BeautifulSoup(html, 'html.parser')
+            data = {'url': response.url or url}
+
+            title_el = soup.select_one('#productTitle') or soup.select_one('#title span') or soup.select_one('#title')
+            if title_el:
+                title = title_el.get_text(strip=True)
+                if title:
+                    data['title'] = title
+
+            price_el = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen') \
+                or soup.select_one('.a-price .aok-offscreen') \
+                or soup.select_one('.a-price .a-offscreen')
+            price_text = price_el.get_text(strip=True) if price_el else None
+            if not price_text:
+                symbol = soup.select_one('.a-price-symbol')
+                whole = soup.select_one('.a-price-whole')
+                fraction = soup.select_one('.a-price-fraction')
+                if whole:
+                    symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
+                    whole_text = whole.get_text(strip=True)
+                    fraction_text = fraction.get_text(strip=True) if fraction else ''
+                    price_text = f"{symbol_text} {whole_text}"
+                    if fraction_text:
+                        price_text += f",{fraction_text}"
+
+            if price_text:
+                formatted, price_val = self.clean_price(price_text)
+                if formatted:
+                    data['price'] = formatted
+                    data['price_value'] = price_val
+
+            image_el = soup.select_one('#landingImage') or soup.select_one('img[data-a-hires]') or soup.select_one('img[data-old-hires]')
+            img_src = None
+            if image_el:
+                img_src = image_el.get('data-old-hires') or image_el.get('data-a-hires') or image_el.get('src')
+            if not img_src:
+                og_img = soup.select_one('meta[property="og:image"]')
+                if og_img:
+                    img_src = og_img.get('content')
+            if img_src and 'http' in img_src:
+                data['image_url'] = img_src
+
+            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                logger.info("Dados Amazon via requests extraídos com sucesso")
+                return data
+        except Exception as e:
+            logger.warning(f"Requests Amazon falhou: {e}")
+
+        return None
         
         try:
             # Lógica melhorada para preços brasileiros
@@ -330,12 +400,20 @@ class FreeIslandScraper:
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
         try:
+            # Primeiro tentar via requests (mais rápido e evita timeout do renderer)
+            requests_data = self.scrape_amazon_requests(url)
+            if requests_data:
+                return requests_data
+
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url}
 
             logger.info(f"Acessando Amazon: {url}")
-            self.driver.set_page_load_timeout(20)
-            self.driver.get(url)
+            self.driver.set_page_load_timeout(15)
+            try:
+                self.driver.get(url)
+            except TimeoutException:
+                logger.warning("Timeout no carregamento da Amazon (Selenium), continuando...")
             time.sleep(2)
             self.wait_ready(timeout=8)
 
