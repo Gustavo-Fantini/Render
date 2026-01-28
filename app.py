@@ -31,6 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 IS_PRODUCTION = os.environ.get('RENDER') == 'true'
+BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -1143,6 +1144,9 @@ class FreeIslandScraper:
         try:
             site = self.identify_site(url)
             logger.info(f"Site identificado: {site}")
+            if BASE_SCRAPE_DELAY_SECONDS > 0:
+                logger.info(f"Aguardando base delay de {BASE_SCRAPE_DELAY_SECONDS}s antes do scraping")
+                time.sleep(BASE_SCRAPE_DELAY_SECONDS)
             
             if site == 'amazon':
                 return self.scrape_amazon(url)
