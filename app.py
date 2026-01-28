@@ -196,6 +196,83 @@ class FreeIslandScraper:
         if not clean:
             return original, None
 
+        try:
+            # Lógica melhorada para preços brasileiros
+            if ',' in clean and '.' in clean:
+                # Tem ambos: "1.234,56" ou "1,234.56"
+                last_comma = clean.rfind(',')
+                last_dot = clean.rfind('.')
+
+                if last_comma > last_dot:
+                    # Formato brasileiro: "1.234,56"
+                    clean = clean.replace('.', '').replace(',', '.')
+                else:
+                    # Formato americano: "1,234.56"
+                    clean = clean.replace(',', '')
+            elif '.' in clean:
+                # Tem apenas ponto: verificar se é separador decimal ou de milhar
+                parts = clean.split('.')
+                if len(parts) == 2 and len(parts[1]) == 3:
+                    # Provavelmente "123.456" (milhar) -> remover ponto
+                    clean = clean.replace('.', '')
+                elif len(parts) > 2:
+                    # Múltiplos pontos -> remover todos
+                    clean = clean.replace('.', '')
+                # else: "123.45" (decimal) -> manter como está
+            elif ',' in clean:
+                # Tem apenas vírgula: verificar se é decimal ou milhar
+                parts = clean.split(',')
+                if len(parts) == 2 and len(parts[1]) <= 2:
+                    # "123,45" (decimal) -> converter para ponto
+                    clean = clean.replace(',', '.')
+                else:
+                    # "123456" (provavelmente milhar) -> remover vírgula
+                    clean = clean.replace(',', '')
+
+            price_float = float(clean)
+
+            # Correção específica para Amazon: mover vírgula duas casas para a esquerda
+            # Detectar padrão Amazon: número que precisa da vírgula movida
+            if price_float >= 1000:
+                # Verificar se é padrão Amazon (baseado no original)
+                if '\n' in original or '\r' in original:
+                    # Preço Amazon com quebra de linha: mover vírgula 2 casas
+                    price_float = price_float / 100
+                    logger.info(f"Preço Amazon corrigido (quebra linha): {original} -> {price_float}")
+                elif len(str(int(price_float))) >= 4 and '.' not in clean and ',' not in clean:
+                    # Número grande sem separadores: provavelmente Amazon
+                    if len(str(int(price_float))) == 5:  # 39999 -> 399.99
+                        price_float = price_float / 100
+                        logger.info(f"Preço Amazon 5 dígitos corrigido: {original} -> {price_float}")
+                    elif len(str(int(price_float))) == 4:  # 1299 -> 12.99
+                        price_float = price_float / 100
+                        logger.info(f"Preço Amazon 4 dígitos corrigido: {original} -> {price_float}")
+                elif price_float >= 10000 and price_float < 100000:
+                    # Padrão Amazon tradicional: mover vírgula 2 casas
+                    price_float = price_float / 100
+                    logger.info(f"Preço Amazon padrão corrigido: {original} -> {price_float}")
+
+            # Formatar no padrão brasileiro
+            if price_float >= 1000:
+                formatted = f"R$ {price_float:,.2f}".replace(',', 'TEMP').replace('.', ',').replace('TEMP', '.')
+            else:
+                formatted = f"R$ {price_float:.2f}".replace('.', ',')
+
+            logger.info(f"Preço processado: {original} -> {formatted}")
+            return formatted, price_float
+
+        except ValueError:
+            logger.warning(f"Não foi possível converter o preço '{original}'")
+            return original, None
+
+    def normalize_price_text(self, text):
+        """Normaliza preço para lidar com faixas e separadores incomuns"""
+        if not text:
+            return None
+        normalized = text.replace('\xa0', ' ').strip()
+        parts = re.split(r'\s*[-–]\s*', normalized)
+        return parts[0].strip() if parts else normalized
+
     def ensure_driver(self):
         """Garante que o WebDriver esteja pronto para uso"""
         if self.driver is None:
@@ -357,75 +434,168 @@ class FreeIslandScraper:
             log_event(logging.ERROR, "amazon_requests_exception", error=str(e))
 
         return None
-        
+
+    def scrape_mercadolivre_requests(self, url):
+        """Extrai dados do Mercado Livre via requests"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
         try:
-            # Lógica melhorada para preços brasileiros
-            if ',' in clean and '.' in clean:
-                # Tem ambos: "1.234,56" ou "1,234.56"
-                last_comma = clean.rfind(',')
-                last_dot = clean.rfind('.')
-                
-                if last_comma > last_dot:
-                    # Formato brasileiro: "1.234,56"
-                    clean = clean.replace('.', '').replace(',', '.')
-                else:
-                    # Formato americano: "1,234.56"
-                    clean = clean.replace(',', '')
-            elif '.' in clean:
-                # Tem apenas ponto: verificar se é separador decimal ou de milhar
-                parts = clean.split('.')
-                if len(parts) == 2 and len(parts[1]) == 3:
-                    # Provavelmente "123.456" (milhar) -> remover ponto
-                    clean = clean.replace('.', '')
-                elif len(parts) > 2:
-                    # Múltiplos pontos -> remover todos
-                    clean = clean.replace('.', '')
-                # else: "123.45" (decimal) -> manter como está
-            elif ',' in clean:
-                # Tem apenas vírgula: verificar se é decimal ou milhar
-                parts = clean.split(',')
-                if len(parts) == 2 and len(parts[1]) <= 2:
-                    # "123,45" (decimal) -> converter para ponto
-                    clean = clean.replace(',', '.')
-                else:
-                    # "123456" (provavelmente milhar) -> remover vírgula
-                    clean = clean.replace(',', '')
-            
-            price_float = float(clean)
-            
-            # Correção específica para Amazon: mover vírgula duas casas para a esquerda
-            # Detectar padrão Amazon: número que precisa da vírgula movida
-            if price_float >= 1000:
-                # Verificar se é padrão Amazon (baseado no original)
-                if '\n' in original or '\r' in original:
-                    # Preço Amazon com quebra de linha: mover vírgula 2 casas
-                    price_float = price_float / 100
-                    logger.info(f"Preço Amazon corrigido (quebra linha): {original} -> {price_float}")
-                elif len(str(int(price_float))) >= 4 and '.' not in clean and ',' not in clean:
-                    # Número grande sem separadores: provavelmente Amazon
-                    if len(str(int(price_float))) == 5:  # 39999 -> 399.99
-                        price_float = price_float / 100
-                        logger.info(f"Preço Amazon 5 dígitos corrigido: {original} -> {price_float}")
-                    elif len(str(int(price_float))) == 4:  # 1299 -> 12.99
-                        price_float = price_float / 100
-                        logger.info(f"Preço Amazon 4 dígitos corrigido: {original} -> {price_float}")
-                elif price_float >= 10000 and price_float < 100000:
-                    # Padrão Amazon tradicional: mover vírgula 2 casas
-                    price_float = price_float / 100
-                    logger.info(f"Preço Amazon padrão corrigido: {original} -> {price_float}")
-            
-            # Formatar no padrão brasileiro
-            if price_float >= 1000:
-                formatted = f"R$ {price_float:,.2f}".replace(',', 'TEMP').replace('.', ',').replace('TEMP', '.')
-            else:
-                formatted = f"R$ {price_float:.2f}".replace('.', ',')
-            
-            logger.info(f"Preço processado: {original} -> {formatted}")
-            return formatted, price_float
-            
-        except ValueError:
-            logger.warning(f"Não foi possível converter o preço '{original}'")
-            return original, None
+            start = time.time()
+            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            elapsed_ms = int((time.time() - start) * 1000)
+            log_event(
+                logging.INFO,
+                "mercadolivre_requests_response",
+                status=response.status_code,
+                elapsed_ms=elapsed_ms,
+                final_url=response.url,
+                content_length=len(response.text or "")
+            )
+            if response.status_code != 200:
+                log_event(logging.WARNING, "mercadolivre_requests_non_200", status=response.status_code, final_url=response.url)
+                return None
+
+            html = response.text
+            lower_html = html.lower()
+            if 'captcha' in lower_html or 'robot' in lower_html:
+                log_event(logging.WARNING, "mercadolivre_requests_blocked", reason="captcha_or_robot", final_url=response.url)
+                return None
+
+            soup = BeautifulSoup(html, 'html.parser')
+            data = {'url': response.url or url}
+
+            title_el = soup.select_one('h1.ui-pdp-title') or soup.select_one('.ui-pdp-title') or soup.select_one('h1')
+            if title_el:
+                title = title_el.get_text(strip=True)
+                if title:
+                    data['title'] = title
+
+            price_text = None
+            price_meta = soup.select_one('meta[itemprop="price"]')
+            if price_meta and price_meta.get('content'):
+                price_text = f"R$ {price_meta.get('content')}"
+            if not price_text:
+                price_container = soup.select_one('#price .andes-money-amount') or soup.select_one('.ui-pdp-price .andes-money-amount')
+                if price_container:
+                    symbol = price_container.select_one('.andes-money-amount__currency-symbol')
+                    fraction = price_container.select_one('.andes-money-amount__fraction')
+                    cents = price_container.select_one('.andes-money-amount__cents')
+                    symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
+                    fraction_text = fraction.get_text(strip=True) if fraction else ''
+                    cents_text = cents.get_text(strip=True) if cents else ''
+                    if fraction_text:
+                        price_text = f"{symbol_text} {fraction_text}"
+                        if cents_text:
+                            price_text += f",{cents_text}"
+
+            if price_text:
+                formatted, price_val = self.clean_price(price_text)
+                if formatted:
+                    data['price'] = formatted
+                    data['price_value'] = price_val
+
+            img_src = None
+            og_img = soup.select_one('meta[property="og:image"]')
+            if og_img:
+                img_src = og_img.get('content')
+            if not img_src:
+                img_el = soup.select_one('img.ui-pdp-image') or soup.select_one('img[src*="http2.mlstatic.com"]')
+                if img_el:
+                    img_src = img_el.get('src') or img_el.get('data-src')
+            if img_src and 'http' in img_src:
+                data['image_url'] = img_src
+
+            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                log_event(logging.INFO, "mercadolivre_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
+                return data
+            log_event(logging.WARNING, "mercadolivre_requests_no_data", final_url=response.url)
+        except Exception as e:
+            log_event(logging.ERROR, "mercadolivre_requests_exception", error=str(e))
+
+        return None
+
+    def scrape_shopee_requests(self, url):
+        """Extrai dados do Shopee via requests"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
+        try:
+            start = time.time()
+            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            elapsed_ms = int((time.time() - start) * 1000)
+            log_event(
+                logging.INFO,
+                "shopee_requests_response",
+                status=response.status_code,
+                elapsed_ms=elapsed_ms,
+                final_url=response.url,
+                content_length=len(response.text or "")
+            )
+            if response.status_code != 200:
+                log_event(logging.WARNING, "shopee_requests_non_200", status=response.status_code, final_url=response.url)
+                return None
+
+            html = response.text
+            lower_html = html.lower()
+            if 'captcha' in lower_html or 'robot' in lower_html:
+                log_event(logging.WARNING, "shopee_requests_blocked", reason="captcha_or_robot", final_url=response.url)
+                return None
+
+            soup = BeautifulSoup(html, 'html.parser')
+            data = {'url': response.url or url}
+
+            title_el = (
+                soup.select_one('meta[property="og:title"]')
+                or soup.select_one('h1.vR6K3w')
+                or soup.select_one('span[data-testid="pdp-product-title"]')
+                or soup.select_one('h1')
+            )
+            if title_el:
+                title = title_el.get('content') if title_el.name == 'meta' else title_el.get_text(strip=True)
+                if title:
+                    data['title'] = title
+
+            price_text = None
+            meta_price = soup.select_one('meta[property="product:price:amount"]') or soup.select_one('meta[property="og:price:amount"]')
+            if meta_price and meta_price.get('content'):
+                price_text = f"R$ {meta_price.get('content')}"
+            if not price_text:
+                price_el = soup.select_one('div.IZPeQz.B67UQ0') or soup.select_one('div.IZPeQz') or soup.select_one('span[data-testid="pdp-price"]')
+                if price_el:
+                    price_text = self.normalize_price_text(price_el.get_text(strip=True))
+
+            if price_text:
+                formatted, price_val = self.clean_price(price_text)
+                if formatted:
+                    data['price'] = formatted
+                    data['price_value'] = price_val
+
+            img_src = None
+            og_img = soup.select_one('meta[property="og:image"]')
+            if og_img:
+                img_src = og_img.get('content')
+            if not img_src:
+                img_el = soup.select_one('img[src*="susercontent.com/file"]')
+                if img_el:
+                    img_src = img_el.get('src') or img_el.get('data-src')
+            if img_src and 'http' in img_src:
+                data['image_url'] = img_src
+
+            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                log_event(logging.INFO, "shopee_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
+                return data
+            log_event(logging.WARNING, "shopee_requests_no_data", final_url=response.url)
+        except Exception as e:
+            log_event(logging.ERROR, "shopee_requests_exception", error=str(e))
+
+        return None
     
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
@@ -503,6 +673,16 @@ class FreeIslandScraper:
     def scrape_mercadolivre(self, url):
         """Extrai dados do Mercado Livre com Selenium"""
         try:
+            # Primeiro tentar via requests
+            requests_data = self.scrape_mercadolivre_requests(url)
+            if requests_data:
+                return requests_data
+            if IS_PRODUCTION:
+                return {'error': 'Mercado Livre bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MERCADOLIVRE_BLOCKED_OR_EMPTY'}
+
+            if not self.ensure_driver():
+                return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
+
             logger.info(f"Acessando Mercado Livre: {url}")
             self.driver.get(url)
             time.sleep(3)
@@ -576,7 +756,7 @@ class FreeIslandScraper:
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados do Mercado Livre: {e}")
-            return {'error': str(e), 'url': url}
+            return {'error': str(e), 'url': url, 'error_code': 'MERCADOLIVRE_SCRAPE_EXCEPTION'}
     
     def scrape_magazineluiza(self, url):
         """Extrai dados do Magazine Luiza com Selenium - Versão Simplificada"""
@@ -807,6 +987,16 @@ class FreeIslandScraper:
     def scrape_shopee(self, url):
         """Extrai dados do Shopee com Selenium"""
         try:
+            # Primeiro tentar via requests
+            requests_data = self.scrape_shopee_requests(url)
+            if requests_data:
+                return requests_data
+            if IS_PRODUCTION:
+                return {'error': 'Shopee bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'SHOPEE_BLOCKED_OR_EMPTY'}
+
+            if not self.ensure_driver():
+                return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
+
             logger.info(f"Acessando Shopee: {url}")
             self.driver.get(url)
             time.sleep(5)
@@ -836,6 +1026,8 @@ class FreeIslandScraper:
             # Preço
             price_selectors = [
                 'span[data-testid="pdp-price"]',
+                'div.IZPeQz.B67UQ0',
+                'div.IZPeQz',
                 '.current-price',
                 '.product-briefing__price .current-price'
             ]
@@ -847,6 +1039,7 @@ class FreeIslandScraper:
                     )
                     price_text = element.text.strip()
                     if price_text:
+                        price_text = self.normalize_price_text(price_text)
                         formatted, price_val = self.clean_price(price_text)
                         if formatted:
                             data['price'] = formatted
@@ -880,7 +1073,7 @@ class FreeIslandScraper:
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados do Shopee: {e}")
-            return {'error': str(e), 'url': url}
+            return {'error': str(e), 'url': url, 'error_code': 'SHOPEE_SCRAPE_EXCEPTION'}
     
     def scrape_product(self, url):
         """Função principal de scraping"""
