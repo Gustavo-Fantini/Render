@@ -1159,6 +1159,31 @@ window.chrome = window.chrome || { runtime: {} };
         except Exception as e:
             logger.error(f"Erro ao salvar no Supabase: {e}")
             return False
+
+    def fetch_supabase_products(self, limit=20):
+        """Busca os últimos produtos salvos no Supabase"""
+        try:
+            if not SUPABASE_URL or not SUPABASE_KEY_SERVICE:
+                logger.error("Supabase não configurado no ambiente")
+                return []
+
+            params = {
+                "select": "mensagem,imagem_url,enviado,criado_em",
+                "order": "criado_em.desc",
+                "limit": str(limit)
+            }
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/produtos",
+                headers=SUPABASE_HEADERS,
+                params=params,
+                timeout=10
+            )
+            if response.status_code == 200:
+                return response.json()
+            logger.error(f"Erro ao buscar produtos no Supabase: {response.text}")
+        except Exception as e:
+            logger.error(f"Erro ao buscar produtos no Supabase: {e}")
+        return []
     
     def close(self):
         """Fecha o WebDriver"""
@@ -1284,6 +1309,22 @@ def save():
     except Exception as e:
         logger.error(f"Erro ao salvar: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/data', methods=['GET'])
+@login_required
+def data():
+    try:
+        limit = request.args.get('limit', '20')
+        try:
+            limit = max(1, min(int(limit), 100))
+        except Exception:
+            limit = 20
+
+        rows = scraper.fetch_supabase_products(limit=limit)
+        return jsonify({'rows': rows, 'success': True})
+    except Exception as e:
+        logger.error(f"Erro ao listar dados: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/logout')
 def logout():

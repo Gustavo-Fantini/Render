@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Free Island - Dashboard</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #0f1115;
+            --bg-elev: #141821;
+            --bg-card: #171c26;
+            --text: #e7eaf0;
+            --muted: #9aa3b2;
+            --accent: #7cf0c8;
+            --accent-2: #6aa6ff;
+            --danger: #ff6b6b;
+            --success: #22c55e;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,130 +28,142 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
+            font-family: 'Space Grotesk', sans-serif;
+            background: radial-gradient(1200px 800px at 80% -10%, rgba(106, 166, 255, 0.15), transparent 60%),
+                        radial-gradient(900px 700px at 10% 0%, rgba(124, 240, 200, 0.12), transparent 55%),
+                        var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
         .header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 20px 0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(14px);
+            background: rgba(15, 17, 21, 0.6);
+            border-bottom: 1px solid var(--border);
         }
 
         .header-content {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 18px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 16px;
+            color: var(--muted);
         }
 
         .btn-logout {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid var(--border);
+            color: var(--text);
             padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            border-radius: 12px;
             text-decoration: none;
+            transition: transform 0.2s ease, background 0.2s ease;
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .btn-logout:hover {
-            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 32px 24px 48px;
             flex: 1 0 auto;
         }
 
-        .card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
+        .grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            align-items: start;
         }
 
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 18px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
         label {
             display: block;
+            font-size: 0.95rem;
+            color: var(--muted);
             margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
         }
 
         input[type="url"], input[type="text"], input[type="number"], textarea {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            background: var(--bg-elev);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+            font-family: inherit;
         }
 
         input:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: rgba(124, 240, 200, 0.5);
+            box-shadow: 0 0 0 3px rgba(124, 240, 200, 0.15);
         }
 
         textarea {
-            min-height: 200px;
+            min-height: 180px;
             resize: vertical;
-            font-family: inherit;
         }
 
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin: 16px 0;
+            color: var(--muted);
         }
 
         .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
         }
 
         .coupon-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 12px;
             display: none;
         }
 
@@ -146,48 +174,37 @@
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
         }
 
         .btn {
-            padding: 15px 30px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #0b0f14;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(106, 166, 255, 0.25);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
         }
 
         .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
+            background: var(--success);
+            color: #0b0f14;
         }
 
         .btn:disabled {
@@ -197,7 +214,7 @@
         }
 
         .result-section {
-            margin-top: 30px;
+            margin-top: 24px;
             display: none;
         }
 
@@ -206,65 +223,56 @@
         }
 
         .product-preview {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: 16px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
         }
 
         .product-image {
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
             object-fit: cover;
-            border-radius: 10px;
-            float: left;
-            margin-right: 20px;
-        }
-
-        .product-info {
-            overflow: hidden;
+            border-radius: 12px;
+            background: #0b0f14;
         }
 
         .product-title {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
+            font-weight: 600;
+            margin-bottom: 6px;
         }
 
         .product-price {
-            font-size: 1.2rem;
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .message-preview {
-            background: #fff;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
+            color: var(--accent);
+            font-size: 1.1rem;
         }
 
         .actions {
             display: flex;
-            gap: 15px;
             flex-wrap: wrap;
+            gap: 12px;
         }
 
         .loading {
             display: none;
             text-align: center;
-            padding: 20px;
+            padding: 18px;
+            color: var(--muted);
         }
 
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--accent);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin: 0 auto 12px;
         }
 
         @keyframes spin {
@@ -273,43 +281,85 @@
         }
 
         .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin: 18px 0 0;
+            font-size: 0.95rem;
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #b7f7cf;
         }
 
         .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.4);
+            color: #ffd3d3;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+
+        .table th,
+        .table td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .table th {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .table img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-true {
+            background: rgba(34, 197, 94, 0.15);
+            color: #9ee8b8;
+            border: 1px solid rgba(34, 197, 94, 0.35);
+        }
+
+        .status-false {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            border: 1px solid var(--border);
         }
 
         .footer {
-            background: #f0f2f5;
-            color: #666;
             text-align: center;
-            padding: 12px 20px;
-            font-size: 0.9rem;
-            border-top: 1px solid #e1e5e9;
+            padding: 16px;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            background: rgba(15, 17, 21, 0.6);
         }
 
-        @media (max-width: 768px) {
-            .form-row {
+        @media (max-width: 980px) {
+            .grid {
                 grid-template-columns: 1fr;
             }
-            
-            .actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
+
+            .form-row {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -317,7 +367,7 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">🏝️ Free Island</div>
+            <div class="logo">Free Island</div>
             <div class="user-info">
                 <span>Bem-vindo, {{ user_name }}!</span>
                 <a href="/logout" class="btn-logout">Sair</a>
@@ -325,81 +375,91 @@
         </div>
     </header>
 
-    <div class="container">
-        <div class="card">
-            <h2 class="card-title">
-                🛒 Extrair Promoção
-            </h2>
-            
-            <form id="scrapeForm">
-                <div class="form-group">
-                    <label for="url">URL do Produto</label>
-                    <input type="url" id="url" name="url" required 
-                           placeholder="https://www.amazon.com.br/exemplo ou https://www.mercadolivre.com.br/exemplo">
-                </div>
+    <main class="container">
+        <div class="grid">
+            <section class="panel">
+                <h2 class="panel-title">🛒 Extrair Promoção</h2>
+                <form id="scrapeForm">
+                    <div class="form-group">
+                        <label for="url">URL do Produto</label>
+                        <input type="url" id="url" name="url" required
+                               placeholder="https://www.amazon.com.br/... ou https://www.mercadolivre.com.br/...">
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="freeShipping" name="free_shipping">
-                    <label for="freeShipping">🚚 Frete Grátis</label>
-                </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="freeShipping" name="free_shipping">
+                        <label for="freeShipping">Frete Grátis</label>
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="hasCoupon" name="has_coupon">
-                    <label for="hasCoupon">🎫 Possui Cupom de Desconto</label>
-                </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="hasCoupon" name="has_coupon">
+                        <label for="hasCoupon">Cupom de Desconto</label>
+                    </div>
 
-                <div class="coupon-section" id="couponSection">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="couponName">Nome do Cupom</label>
-                            <input type="text" id="couponName" name="coupon_name" placeholder="EX: PROMO10">
-                        </div>
-                        <div class="form-group">
-                            <label for="couponDiscount">Desconto (%)</label>
-                            <input type="number" id="couponDiscount" name="coupon_discount" 
-                                   min="1" max="100" placeholder="10">
+                    <div class="coupon-section" id="couponSection">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="couponName">Nome do Cupom</label>
+                                <input type="text" id="couponName" name="coupon_name" placeholder="EX: PROMO10">
+                            </div>
+                            <div class="form-group">
+                                <label for="couponDiscount">Desconto (%)</label>
+                                <input type="number" id="couponDiscount" name="coupon_discount"
+                                       min="1" max="100" placeholder="10">
+                            </div>
                         </div>
                     </div>
+
+                    <button type="submit" class="btn btn-primary" id="scrapeBtn">Extrair Dados</button>
+                </form>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Extraindo dados do produto...</p>
                 </div>
 
-                <button type="submit" class="btn btn-primary" id="scrapeBtn">
-                    Extrair Dados
-                </button>
-            </form>
+                <div class="result-section" id="resultSection">
+                    <h3 class="panel-title">📦 Produto Encontrado</h3>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Extraindo dados do produto... Aguarde!</p>
-            </div>
+                    <div class="product-preview" id="productPreview"></div>
+
+                    <div class="form-group">
+                        <label for="message">Mensagem Gerada</label>
+                        <textarea id="message" name="message"></textarea>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-ghost" id="editBtn">Editar</button>
+                        <button class="btn btn-success" id="saveBtn">Salvar no Supabase</button>
+                        <button class="btn btn-ghost" id="resetBtn">Nova Busca</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <h2 class="panel-title">📡 Base ao Vivo</h2>
+                    <button class="btn btn-ghost" id="refreshBtn">Atualizar</button>
+                </div>
+                <div id="liveStatus" style="color: var(--muted); font-size: 0.85rem; margin-bottom: 12px;"></div>
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Imagem</th>
+                                <th>Mensagem</th>
+                                <th>Enviado</th>
+                                <th>Criado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liveTableBody">
+                            <tr><td colspan="4" style="color: var(--muted);">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
-
-        <div class="result-section" id="resultSection">
-            <div class="card">
-                <h3 class="card-title">📦 Produto Encontrado</h3>
-                
-                <div class="product-preview" id="productPreview">
-                    <!-- Produto será inserido aqui -->
-                </div>
-
-                <div class="form-group">
-                    <label for="message">Mensagem Gerada</label>
-                    <textarea id="message" name="message"></textarea>
-                </div>
-
-                <div class="actions">
-                    <button class="btn btn-primary" id="editBtn">
-                        ✏️ Editar Mensagem
-                    </button>
-                    <button class="btn btn-success" id="saveBtn">
-                        💾 Salvar no Supabase
-                    </button>
-                    <button class="btn btn-secondary" id="resetBtn">
-                        🔄 Nova Busca
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <footer class="footer">
         Copyright (c) {{ current_year }} Free Island | Versao {{ app_version }}
@@ -408,8 +468,8 @@
     <script>
         let currentProduct = null;
         let currentMessage = '';
+        let liveTimer = null;
 
-        // Toggle coupon section
         document.getElementById('hasCoupon').addEventListener('change', function() {
             const couponSection = document.getElementById('couponSection');
             if (this.checked) {
@@ -419,26 +479,22 @@
             }
         });
 
-        // Form submit
         document.getElementById('scrapeForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const url = document.getElementById('url').value;
             const freeShipping = document.getElementById('freeShipping').checked;
             const hasCoupon = document.getElementById('hasCoupon').checked;
             const couponName = hasCoupon ? document.getElementById('couponName').value : null;
             const couponDiscount = hasCoupon ? document.getElementById('couponDiscount').value : null;
 
-            // Show loading
             document.getElementById('loading').style.display = 'block';
             document.getElementById('scrapeBtn').disabled = true;
 
             try {
                 const response = await fetch('/scrape', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url: url,
                         free_shipping: freeShipping,
@@ -452,17 +508,9 @@
                 if (data.success) {
                     currentProduct = data.product;
                     currentMessage = data.message;
-                    
-                    // Show product preview
                     showProductPreview(data.product);
-                    
-                    // Show message
                     document.getElementById('message').value = data.message;
-                    
-                    // Show result section
                     document.getElementById('resultSection').classList.add('active');
-                    
-                    // Scroll to results
                     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
                 } else {
                     showAlert('Erro: ' + data.error, 'error');
@@ -470,23 +518,18 @@
             } catch (error) {
                 showAlert('Erro de conexão. Tente novamente.', 'error');
             } finally {
-                // Hide loading
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('scrapeBtn').disabled = false;
             }
         });
 
-        // Edit message
         document.getElementById('editBtn').addEventListener('click', function() {
             const messageTextarea = document.getElementById('message');
             messageTextarea.focus();
             messageTextarea.select();
-            
-            // Mostrar alerta informativo
             showAlert('Edite a mensagem no campo acima e depois clique em "Salvar no Supabase"', 'success');
         });
 
-        // Save to Supabase
         document.getElementById('saveBtn').addEventListener('click', async function() {
             if (!currentProduct || !currentMessage) {
                 showAlert('Nenhum produto para salvar', 'error');
@@ -494,29 +537,23 @@
             }
 
             const message = document.getElementById('message').value;
-            
+
             this.disabled = true;
-            this.textContent = '💾 Salvando...';
+            this.textContent = 'Salvando...';
 
             try {
                 const response = await fetch('/save', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        product: currentProduct,
-                        message: message
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product: currentProduct, message: message })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
                     showAlert('Produto salvo com sucesso no Supabase!', 'success');
-                    setTimeout(() => {
-                        resetForm();
-                    }, 2000);
+                    setTimeout(() => { resetForm(); }, 1800);
+                    loadLiveData();
                 } else {
                     showAlert('Erro ao salvar: ' + data.error, 'error');
                 }
@@ -524,16 +561,15 @@
                 showAlert('Erro de conexão ao salvar', 'error');
             } finally {
                 this.disabled = false;
-                this.textContent = '💾 Salvar no Supabase';
+                this.textContent = 'Salvar no Supabase';
             }
         });
 
-        // Reset form
         document.getElementById('resetBtn').addEventListener('click', resetForm);
+        document.getElementById('refreshBtn').addEventListener('click', loadLiveData);
 
         function showProductPreview(product) {
             const preview = document.getElementById('productPreview');
-            
             let imageHtml = '';
             if (product.image_url) {
                 imageHtml = `<img src="${product.image_url}" alt="Produto" class="product-image">`;
@@ -541,34 +577,29 @@
 
             preview.innerHTML = `
                 ${imageHtml}
-                <div class="product-info">
+                <div>
                     <div class="product-title">${product.title || 'Título não encontrado'}</div>
                     <div class="product-price">${product.price || 'Preço não encontrado'}</div>
                 </div>
-                <div style="clear: both;"></div>
             `;
         }
 
         function showAlert(message, type) {
-            // Remove existing alerts
             const existingAlert = document.querySelector('.alert');
             if (existingAlert) {
                 existingAlert.remove();
             }
 
-            // Create new alert
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
             alert.textContent = message;
-            
-            // Insert after the first card
-            const firstCard = document.querySelector('.card');
-            firstCard.parentNode.insertBefore(alert, firstCard.nextSibling);
 
-            // Auto remove after 5 seconds
+            const formPanel = document.querySelector('.panel');
+            formPanel.appendChild(alert);
+
             setTimeout(() => {
                 alert.remove();
-            }, 5000);
+            }, 4500);
         }
 
         function resetForm() {
@@ -577,11 +608,70 @@
             document.getElementById('couponSection').classList.remove('active');
             currentProduct = null;
             currentMessage = '';
-            
-            // Remove any alerts
+
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => alert.remove());
         }
+
+        function formatDate(value) {
+            if (!value) return '-';
+            try {
+                const date = new Date(value);
+                return date.toLocaleString('pt-BR');
+            } catch {
+                return value;
+            }
+        }
+
+        function normalizeMessage(msg) {
+            if (!msg) return '';
+            try {
+                msg = JSON.parse(msg);
+            } catch {
+                // ignore
+            }
+            msg = String(msg).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            return msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
+        }
+
+        async function loadLiveData() {
+            const status = document.getElementById('liveStatus');
+            const tbody = document.getElementById('liveTableBody');
+            status.textContent = 'Atualizando...';
+
+            try {
+                const res = await fetch('/data?limit=20');
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro ao carregar');
+                }
+
+                if (!data.rows || data.rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="color: var(--muted);">Sem registros</td></tr>';
+                } else {
+                    tbody.innerHTML = data.rows.map(row => {
+                        const img = row.imagem_url ? `<img src="${row.imagem_url}" alt="">` : '';
+                        const msg = normalizeMessage(row.mensagem);
+                        const statusClass = row.enviado ? 'status-true' : 'status-false';
+                        const statusText = row.enviado ? 'Enviado' : 'Pendente';
+                        return `
+                            <tr>
+                                <td>${img}</td>
+                                <td>${msg || '-'}</td>
+                                <td><span class="status-pill ${statusClass}">${statusText}</span></td>
+                                <td>${formatDate(row.criado_em)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+                status.textContent = `Atualizado agora`;
+            } catch (err) {
+                status.textContent = 'Erro ao carregar base ao vivo';
+            }
+        }
+
+        loadLiveData();
+        liveTimer = setInterval(loadLiveData, 15000);
     </script>
 </body>
 </html>
