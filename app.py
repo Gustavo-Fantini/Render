@@ -48,6 +48,7 @@ APP_VERSION = os.environ.get('APP_VERSION') or read_version_file() or '0.0.0'
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+MAGALU_USE_SELENIUM_IN_PROD = os.environ.get('MAGALU_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -908,6 +909,93 @@ window.chrome = window.chrome || { runtime: {} };
             self.set_last_error("SHOPEE_REQUESTS_EXCEPTION", "Erro ao requisitar Shopee (requests)", error=str(e))
 
         return None
+
+    def scrape_magalu_requests(self, url):
+        """Extrai dados do Magazine Luiza via requests (mais leve que Selenium)"""
+        self.clear_last_error()
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
+        try:
+            start = time.time()
+            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            elapsed_ms = int((time.time() - start) * 1000)
+            log_event(
+                logging.INFO,
+                "magalu_requests_response",
+                status=response.status_code,
+                elapsed_ms=elapsed_ms,
+                final_url=response.url,
+                content_length=len(response.text or "")
+            )
+            if response.status_code != 200:
+                log_event(logging.WARNING, "magalu_requests_non_200", status=response.status_code, final_url=response.url)
+                self.set_last_error("MAGALU_REQUESTS_NON_200", "Resposta não-200 do Magazine Luiza (requests)", status=response.status_code, final_url=response.url)
+                return None
+
+            html = response.text
+            lower_html = html.lower()
+            if 'captcha' in lower_html or 'robot' in lower_html or 'access denied' in lower_html:
+                log_event(logging.WARNING, "magalu_requests_blocked", reason="captcha_or_robot", final_url=response.url)
+                self.set_last_error("MAGALU_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
+                return None
+
+            soup = BeautifulSoup(html, 'html.parser')
+            data = {'url': url, 'resolved_url': response.url or url}
+
+            title_el = (
+                soup.select_one('meta[property="og:title"]')
+                or soup.select_one('h1')
+                or soup.select_one('h2[data-testid="heading"]')
+            )
+            if title_el:
+                title = title_el.get('content') if title_el.name == 'meta' else title_el.get_text(strip=True)
+                if title:
+                    data['title'] = title
+
+            price_text = None
+            meta_price = soup.select_one('meta[property="product:price:amount"]') or soup.select_one('meta[property="og:price:amount"]')
+            if meta_price and meta_price.get('content'):
+                price_text = f"R$ {meta_price.get('content')}"
+            if not price_text:
+                try:
+                    for script in soup.select('script[type="application/ld+json"]'):
+                        if not script.string:
+                            continue
+                        if '"price"' in script.string and '"priceCurrency"' in script.string:
+                            match = re.search(r'"price"\\s*:\\s*"?([\\d.,]+)"?', script.string)
+                            if match:
+                                price_text = f"R$ {match.group(1)}"
+                                break
+                except Exception:
+                    pass
+            if price_text:
+                formatted, price_val = self.clean_price(price_text)
+                if formatted:
+                    data['price'] = formatted
+                    data['price_value'] = price_val
+
+            img_src = None
+            og_img = soup.select_one('meta[property="og:image"]')
+            if og_img:
+                img_src = og_img.get('content')
+            if img_src and 'http' in img_src:
+                data['image_url'] = img_src
+
+            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                log_event(logging.INFO, "magalu_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
+                return data
+
+            log_event(logging.WARNING, "magalu_requests_no_data", final_url=response.url)
+            self.set_last_error("MAGALU_REQUESTS_NO_DATA", "Nenhum dado encontrado (requests)", final_url=response.url)
+        except Exception as e:
+            log_event(logging.ERROR, "magalu_requests_exception", error=str(e))
+            self.set_last_error("MAGALU_REQUESTS_EXCEPTION", "Erro ao requisitar Magazine Luiza (requests)", error=str(e))
+
+        return None
     
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
@@ -1144,12 +1232,22 @@ window.chrome = window.chrome || { runtime: {} };
         """Extrai dados do Magazine Luiza com Selenium - Versão Simplificada"""
         try:
             self.clear_last_error()
+            if IS_PRODUCTION and not MAGALU_USE_SELENIUM_IN_PROD:
+                requests_data = self.scrape_magalu_requests(url)
+                if requests_data:
+                    return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
+                requests_data = self.scrape_magalu_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'Magazine Luiza bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MAGALU_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
                 if self.last_error:
                     return {'url': url, **self.last_error}
+                requests_data = self.scrape_magalu_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Magazine Luiza: {url}")
@@ -1160,15 +1258,24 @@ window.chrome = window.chrome || { runtime: {} };
             if not self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10):
                 if self.last_error:
                     return {'url': url, **self.last_error}
+                requests_data = self.scrape_magalu_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MAGALU_NAV_FAIL'}
 
             try:
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
                     if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        requests_data = self.scrape_magalu_requests(url)
+                        if requests_data:
+                            return requests_data
                         return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
+                    requests_data = self.scrape_magalu_requests(url)
+                    if requests_data:
+                        return requests_data
                     return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
             except Exception:
                 pass
@@ -1385,6 +1492,9 @@ window.chrome = window.chrome || { runtime: {} };
                 return data
             if self.last_error:
                 return {'url': url, **self.last_error}
+            requests_data = self.scrape_magalu_requests(url)
+            if requests_data:
+                return requests_data
             return {'error': 'Nenhum dado encontrado no Magazine Luiza', 'url': url, 'error_code': 'MAGALU_NO_DATA'}
             
         except Exception as e:
