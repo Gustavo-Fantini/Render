@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 import os
+import sys
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -163,6 +164,11 @@ class FreeIslandScraper:
             
             uc = None
             try:
+                try:
+                    import distutils  # type: ignore
+                except Exception:
+                    import setuptools._distutils as distutils  # type: ignore
+                    sys.modules.setdefault("distutils", distutils)
                 import undetected_chromedriver as uc  # Lazy import to avoid distutils issues on newer Python
             except Exception as e:
                 logger.warning(f"Undetected Chrome indisponível: {e}")
