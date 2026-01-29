@@ -703,12 +703,12 @@ class FreeIslandScraper:
             requests_data = self.scrape_amazon_requests(url)
             if requests_data:
                 return requests_data
-            if IS_PRODUCTION:
-                # Em produção, evitar Selenium para não gerar timeout/crash do renderer
+            if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
+                # Em produção, evitar Selenium se explicitamente desabilitado
                 return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'AMAZON_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
-                return {'error': 'WebDriver não inicializado', 'url': url}
+                return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Amazon: {url}")
             self.driver.set_page_load_timeout(15)
@@ -872,13 +872,31 @@ class FreeIslandScraper:
     def scrape_magazineluiza(self, url):
         """Extrai dados do Magazine Luiza com Selenium - Versão Simplificada"""
         try:
+            if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
+                return {'error': 'Magazine Luiza bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MAGALU_BLOCKED_OR_EMPTY'}
+
+            if not self.ensure_driver():
+                return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
+
             logger.info(f"Acessando Magazine Luiza: {url}")
             
             # Configurar driver para Magazine Luiza
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
-            self.driver.get(url)
-            time.sleep(5)
+            self.driver.set_page_load_timeout(20)
+            try:
+                self.driver.get(url)
+            except TimeoutException:
+                logger.warning("Timeout no carregamento do Magazine Luiza (Selenium), continuando...")
+            time.sleep(3)
+            self.wait_ready(timeout=10)
+
+            try:
+                page_source = self.driver.page_source.lower()
+                if 'captcha' in page_source or 'robot' in page_source:
+                    return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
+            except Exception:
+                pass
             
             # Esperar carregamento completo
             try:
@@ -906,9 +924,13 @@ class FreeIslandScraper:
                             href = link.get_attribute('href')
                             if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
                                 logger.info(f"Link do produto encontrado: {href}")
-                                self.driver.get(href)
-                                time.sleep(5)
-                                break
+                                  try:
+                                      self.driver.get(href)
+                                  except TimeoutException:
+                                      logger.warning("Timeout no carregamento do produto Magalu, continuando...")
+                                  time.sleep(3)
+                                  self.wait_ready(timeout=8)
+                                  break
                         except:
                             continue
                 except Exception as e:
@@ -1102,15 +1124,27 @@ class FreeIslandScraper:
             requests_data = self.scrape_shopee_requests(url)
             if requests_data:
                 return requests_data
-            if IS_PRODUCTION:
+            if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 return {'error': 'Shopee bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'SHOPEE_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Shopee: {url}")
-            self.driver.get(url)
-            time.sleep(5)
+            self.driver.set_page_load_timeout(20)
+            try:
+                self.driver.get(url)
+            except TimeoutException:
+                logger.warning("Timeout no carregamento da Shopee (Selenium), continuando...")
+            time.sleep(3)
+            self.wait_ready(timeout=10)
+
+            try:
+                page_source = self.driver.page_source.lower()
+                if 'captcha' in page_source or 'robot' in page_source:
+                    return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
+            except Exception:
+                pass
             
             data = {'url': url}
             
