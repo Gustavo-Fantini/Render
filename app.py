@@ -129,7 +129,7 @@ class FreeIslandScraper:
     def clear_last_error(self):
         self.last_error = None
 
-    def build_chrome_options(self, production=False, user_agent=None):
+    def build_chrome_options(self, production=False, user_agent=None, allow_experimental=True):
         options = Options()
         headless_arg = '--headless=new' if production else '--headless'
         options.add_argument(headless_arg)
@@ -148,12 +148,16 @@ class FreeIslandScraper:
         options.add_argument('--lang=pt-BR,pt')
         if user_agent:
             options.add_argument(f'--user-agent={user_agent}')
-        options.add_experimental_option('excludeSwitches', ['enable-automation'])
-        options.add_experimental_option('useAutomationExtension', False)
-        options.add_experimental_option('prefs', {
-            'intl.accept_languages': 'pt-BR,pt',
-            'profile.default_content_setting_values.notifications': 2
-        })
+        if allow_experimental:
+            try:
+                options.add_experimental_option('excludeSwitches', ['enable-automation'])
+                options.add_experimental_option('useAutomationExtension', False)
+                options.add_experimental_option('prefs', {
+                    'intl.accept_languages': 'pt-BR,pt',
+                    'profile.default_content_setting_values.notifications': 2
+                })
+            except Exception as e:
+                logger.warning(f"Falha ao aplicar opções experimentais do Chrome: {e}")
         # Garantir que binary_location seja string
         if getattr(options, "binary_location", None) is not None and not isinstance(options.binary_location, str):
             options.binary_location = str(options.binary_location)
@@ -165,7 +169,8 @@ class FreeIslandScraper:
             # Configuração para Render
             options = self.build_chrome_options(
                 production=True,
-                user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                allow_experimental=False
             )
             
             uc = None
@@ -201,7 +206,8 @@ class FreeIslandScraper:
             # Configuração para desenvolvimento local
             options = self.build_chrome_options(
                 production=False,
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                allow_experimental=True
             )
             
             try:
