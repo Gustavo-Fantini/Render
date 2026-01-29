@@ -49,6 +49,8 @@ ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower(
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 MAGALU_USE_SELENIUM_IN_PROD = os.environ.get('MAGALU_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+PROXY_LIST_FILE = os.environ.get('PROXY_LIST_FILE', 'proxies.txt')
+MAGALU_USE_PROXY = os.environ.get('MAGALU_USE_PROXY', 'true').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -118,7 +120,78 @@ class FreeIslandScraper:
     def __init__(self):
         self.driver = None
         self.last_error = None
+        self.proxy_list = []
+        self.proxy_index = 0
+        self.proxy_mtime = None
         self.setup_driver()
+        self.load_proxy_list()
+
+    def load_proxy_list(self):
+        """Carrega proxies do arquivo (JSON ou linha a linha)."""
+        try:
+            stat = os.stat(PROXY_LIST_FILE)
+            if self.proxy_mtime == stat.st_mtime and self.proxy_list:
+                return
+            self.proxy_mtime = stat.st_mtime
+        except Exception:
+            self.proxy_list = []
+            return
+
+        proxies = []
+        try:
+            with open(PROXY_LIST_FILE, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    self.proxy_list = []
+                    return
+                # Tentar JSON primeiro
+                try:
+                    data = json.loads(content)
+                    if isinstance(data, dict) and "proxies" in data:
+                        for item in data.get("proxies", []):
+                            proxy_url = item.get("proxy")
+                            if proxy_url:
+                                proxies.append(proxy_url.strip())
+                    elif isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, str):
+                                proxies.append(item.strip())
+                except Exception:
+                    # Fallback para linhas simples
+                    for line in content.splitlines():
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        proxies.append(line)
+        except Exception:
+            self.proxy_list = []
+            return
+
+        # Normalizar esquema
+        normalized = []
+        for p in proxies:
+            if not p:
+                continue
+            if "://" not in p:
+                p = f"http://{p}"
+            normalized.append(p)
+        self.proxy_list = normalized
+        self.proxy_index = 0
+
+    def get_next_proxy(self):
+        self.load_proxy_list()
+        if not self.proxy_list:
+            return None
+        proxy = self.proxy_list[self.proxy_index % len(self.proxy_list)]
+        self.proxy_index += 1
+        return proxy
+
+    def build_session(self, headers, proxy_url=None):
+        session = requests.Session()
+        session.headers.update(headers)
+        if proxy_url:
+            session.proxies.update({"http": proxy_url, "https": proxy_url})
+        return session
 
     def set_last_error(self, code, message, **details):
         self.last_error = {"error_code": code, "error": message}
@@ -938,8 +1011,8 @@ window.chrome = window.chrome || { runtime: {} };
         }
         try:
             start = time.time()
-            session = requests.Session()
-            session.headers.update(base_headers)
+            proxy_url = self.get_next_proxy() if MAGALU_USE_PROXY else None
+            session = self.build_session(base_headers, proxy_url=proxy_url)
             try:
                 session.get("https://www.magazineluiza.com.br/", timeout=8)
             except Exception:
@@ -968,8 +1041,8 @@ window.chrome = window.chrome || { runtime: {} };
                 log_event(logging.WARNING, "magalu_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 # Tentar uma segunda vez com headers mobile
                 try:
-                    session = requests.Session()
-                    session.headers.update(mobile_headers)
+                    proxy_url = self.get_next_proxy() if MAGALU_USE_PROXY else None
+                    session = self.build_session(mobile_headers, proxy_url=proxy_url)
                     response = session.get(url, timeout=12, allow_redirects=True)
                     html = response.text
                     lower_html = html.lower()
