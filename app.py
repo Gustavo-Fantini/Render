@@ -32,7 +32,10 @@ logger = logging.getLogger(__name__)
 
 IS_PRODUCTION = os.environ.get('RENDER') == 'true'
 BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
-APP_VERSION = os.environ.get('APP_VERSION', '0.0.0')
+# Versionamento:
+# correção -> 0.0.1 | coisa nova -> 0.1.0 | estrutura completamente nova -> 1.0.0
+# Atualize este número a cada push.
+APP_VERSION = os.environ.get('APP_VERSION', '3.15.2')
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 
