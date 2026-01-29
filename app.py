@@ -124,7 +124,7 @@ class FreeIslandScraper:
         self.last_error = {"error_code": code, "error": message}
         if details:
             self.last_error["details"] = details
-        log_event(logging.WARNING, "scrape_stage_error", code=code, message=message, **details)
+        log_event(logging.WARNING, "scrape_stage_error", code=code, error_message=message, **details)
 
     def clear_last_error(self):
         self.last_error = None
