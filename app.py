@@ -406,6 +406,7 @@ window.chrome = window.chrome || { runtime: {} };
             '#corePriceDisplay_desktop_feature_div .priceToPay .a-offscreen',
             '#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen',
             '#corePriceDisplay_desktop_feature_div .a-price .a-offscreen',
+            '#apex_desktop_newAccordionRow .a-offscreen',
         ], min_len=2)
         if offscreen_text:
             return offscreen_text
@@ -439,6 +440,9 @@ window.chrome = window.chrome || { runtime: {} };
         offscreen_text = self.first_text_by_selectors([
             '#apex_desktop #apex_price .aok-offscreen',
             '#apex_desktop #apex_price .a-offscreen',
+            '#priceblock_ourprice',
+            '#priceblock_dealprice',
+            '#priceblock_saleprice',
         ], min_len=2)
         if offscreen_text:
             return offscreen_text
@@ -557,6 +561,48 @@ window.chrome = window.chrome || { runtime: {} };
             log_event(logging.ERROR, "amazon_requests_exception", error=str(e))
 
         return None
+
+    def resolve_amazon_url(self, url):
+        """Resolve URLs encurtadas da Amazon (ex: amzn.to)"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
+        try:
+            response = requests.head(url, headers=headers, timeout=8, allow_redirects=True)
+            if response.url:
+                return response.url
+        except Exception:
+            pass
+        try:
+            response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+            if response.url:
+                return response.url
+        except Exception:
+            pass
+        return url
+
+    def try_accept_amazon_cookies(self):
+        """Tenta aceitar banner de cookies da Amazon (quando aparece)"""
+        selectors = [
+            '#sp-cc-accept',
+            'input#sp-cc-accept',
+            'button#sp-cc-accept',
+            'input[name="accept"]',
+            'button[name="accept"]',
+        ]
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                if elements:
+                    elements[0].click()
+                    time.sleep(0.5)
+                    return True
+            except Exception:
+                continue
+        return False
 
     def scrape_mercadolivre_requests(self, url):
         """Extrai dados do Mercado Livre via requests"""
@@ -756,8 +802,10 @@ window.chrome = window.chrome || { runtime: {} };
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
-            logger.info(f"Acessando Amazon: {url}")
-            self.navigate_with_wait(url, wait_seconds=2, ready_timeout=8)
+            resolved_url = self.resolve_amazon_url(url)
+            logger.info(f"Acessando Amazon: {url} -> {resolved_url}")
+            self.navigate_with_wait(resolved_url, wait_seconds=2, ready_timeout=8)
+            self.try_accept_amazon_cookies()
 
             # Detectar possível captcha/bloqueio
             try:
@@ -767,7 +815,7 @@ window.chrome = window.chrome || { runtime: {} };
             except Exception:
                 pass
             
-            data = {'url': url}
+            data = {'url': url, 'resolved_url': resolved_url}
             
             # Título
             title = self.first_text_by_selectors([
@@ -795,6 +843,7 @@ window.chrome = window.chrome || { runtime: {} };
             # Imagem
             img_src = self.first_attr_by_selectors([
                 '#landingImage',
+                '#imgTagWrapperId img',
                 '.a-dynamic-image',
                 'img[data-a-hires]',
                 'img[data-old-hires]'
@@ -802,7 +851,17 @@ window.chrome = window.chrome || { runtime: {} };
             if img_src:
                 data['image_url'] = img_src
                 logger.info(f"Imagem encontrada: {img_src}")
-            
+
+            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                return data
+
+            # Fallback com requests quando Selenium não retorna dados
+            fallback_url = resolved_url or url
+            requests_data = self.scrape_amazon_requests(fallback_url)
+            if requests_data:
+                requests_data.setdefault('original_url', url)
+                return requests_data
+
             return data
             
         except Exception as e:
