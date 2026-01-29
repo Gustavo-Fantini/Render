@@ -103,7 +103,17 @@ def login_required(f):
 class FreeIslandScraper:
     def __init__(self):
         self.driver = None
+        self.last_error = None
         self.setup_driver()
+
+    def set_last_error(self, code, message, **details):
+        self.last_error = {"error_code": code, "error": message}
+        if details:
+            self.last_error["details"] = details
+        log_event(logging.WARNING, "scrape_stage_error", code=code, message=message, **details)
+
+    def clear_last_error(self):
+        self.last_error = None
 
     def build_chrome_options(self, production=False, user_agent=None):
         options = Options()
@@ -223,8 +233,10 @@ window.chrome = window.chrome || { runtime: {} };
             self.driver.get(url)
         except TimeoutException:
             logger.warning("Timeout no carregamento (Selenium), continuando...")
+            self.set_last_error("SELENIUM_TIMEOUT", "Timeout no carregamento da página", url=url)
         except Exception as e:
             logger.warning(f"Falha ao carregar URL no Selenium: {e}")
+            self.set_last_error("SELENIUM_NAV_EXCEPTION", "Falha ao abrir página no Selenium", url=url, error=str(e))
             return False
         time.sleep(wait_seconds)
         self.wait_ready(timeout=ready_timeout)
@@ -524,6 +536,7 @@ window.chrome = window.chrome || { runtime: {} };
 
     def scrape_amazon_requests(self, url):
         """Extrai dados da Amazon via requests (mais rápido que Selenium)"""
+        self.clear_last_error()
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -544,12 +557,14 @@ window.chrome = window.chrome || { runtime: {} };
             )
             if response.status_code != 200:
                 log_event(logging.WARNING, "amazon_requests_non_200", status=response.status_code, final_url=response.url)
+                self.set_last_error("AMAZON_REQUESTS_NON_200", "Resposta não-200 da Amazon (requests)", status=response.status_code, final_url=response.url)
                 return None
 
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
                 log_event(logging.WARNING, "amazon_requests_blocked", reason="captcha_or_robot_check", final_url=response.url)
+                self.set_last_error("AMAZON_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                 return None
             log_event(
                 logging.INFO,
@@ -619,8 +634,10 @@ window.chrome = window.chrome || { runtime: {} };
                 log_event(logging.INFO, "amazon_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
                 return data
             log_event(logging.WARNING, "amazon_requests_no_data", final_url=response.url)
+            self.set_last_error("AMAZON_REQUESTS_NO_DATA", "Nenhum dado encontrado (requests)", final_url=response.url)
         except Exception as e:
             log_event(logging.ERROR, "amazon_requests_exception", error=str(e))
+            self.set_last_error("AMAZON_REQUESTS_EXCEPTION", "Erro ao requisitar Amazon (requests)", error=str(e))
 
         return None
 
@@ -668,6 +685,7 @@ window.chrome = window.chrome || { runtime: {} };
 
     def scrape_mercadolivre_requests(self, url):
         """Extrai dados do Mercado Livre via requests"""
+        self.clear_last_error()
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -688,12 +706,14 @@ window.chrome = window.chrome || { runtime: {} };
             )
             if response.status_code != 200:
                 log_event(logging.WARNING, "mercadolivre_requests_non_200", status=response.status_code, final_url=response.url)
+                self.set_last_error("MERCADOLIVRE_REQUESTS_NON_200", "Resposta não-200 do Mercado Livre (requests)", status=response.status_code, final_url=response.url)
                 return None
 
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot' in lower_html:
                 log_event(logging.WARNING, "mercadolivre_requests_blocked", reason="captcha_or_robot", final_url=response.url)
+                self.set_last_error("MERCADOLIVRE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                 return None
             log_event(
                 logging.INFO,
@@ -753,13 +773,16 @@ window.chrome = window.chrome || { runtime: {} };
                 log_event(logging.INFO, "mercadolivre_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
                 return data
             log_event(logging.WARNING, "mercadolivre_requests_no_data", final_url=response.url)
+            self.set_last_error("MERCADOLIVRE_REQUESTS_NO_DATA", "Nenhum dado encontrado (requests)", final_url=response.url)
         except Exception as e:
             log_event(logging.ERROR, "mercadolivre_requests_exception", error=str(e))
+            self.set_last_error("MERCADOLIVRE_REQUESTS_EXCEPTION", "Erro ao requisitar Mercado Livre (requests)", error=str(e))
 
         return None
 
     def scrape_shopee_requests(self, url):
         """Extrai dados do Shopee via requests"""
+        self.clear_last_error()
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -780,12 +803,14 @@ window.chrome = window.chrome || { runtime: {} };
             )
             if response.status_code != 200:
                 log_event(logging.WARNING, "shopee_requests_non_200", status=response.status_code, final_url=response.url)
+                self.set_last_error("SHOPEE_REQUESTS_NON_200", "Resposta não-200 da Shopee (requests)", status=response.status_code, final_url=response.url)
                 return None
 
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot' in lower_html:
                 log_event(logging.WARNING, "shopee_requests_blocked", reason="captcha_or_robot", final_url=response.url)
+                self.set_last_error("SHOPEE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                 return None
             log_event(
                 logging.INFO,
@@ -844,14 +869,17 @@ window.chrome = window.chrome || { runtime: {} };
                 log_event(logging.INFO, "shopee_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
                 return data
             log_event(logging.WARNING, "shopee_requests_no_data", final_url=response.url)
+            self.set_last_error("SHOPEE_REQUESTS_NO_DATA", "Nenhum dado encontrado (requests)", final_url=response.url)
         except Exception as e:
             log_event(logging.ERROR, "shopee_requests_exception", error=str(e))
+            self.set_last_error("SHOPEE_REQUESTS_EXCEPTION", "Erro ao requisitar Shopee (requests)", error=str(e))
 
         return None
     
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
         try:
+            self.clear_last_error()
             # Primeiro tentar via requests (mais rápido e evita timeout do renderer)
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_amazon_requests(url)
@@ -868,6 +896,8 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data = self.scrape_amazon_requests(url)
                 if requests_data:
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             resolved_url = self.resolve_amazon_url(url)
@@ -877,6 +907,8 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     requests_data.setdefault('original_url', url)
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'AMAZON_NAV_FAIL'}
             self.try_accept_amazon_cookies()
 
@@ -889,6 +921,8 @@ window.chrome = window.chrome || { runtime: {} };
                         if requests_data:
                             requests_data.setdefault('original_url', url)
                             return requests_data
+                        if self.last_error:
+                            return {'url': url, **self.last_error}
                         return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
@@ -896,6 +930,8 @@ window.chrome = window.chrome || { runtime: {} };
                     if requests_data:
                         requests_data.setdefault('original_url', url)
                         return requests_data
+                    if self.last_error:
+                        return {'url': url, **self.last_error}
                     return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
             except Exception:
                 pass
@@ -947,15 +983,19 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data.setdefault('original_url', url)
                 return requests_data
 
-            return data
+            if self.last_error:
+                return {'url': url, **self.last_error}
+            return {'error': 'Nenhum dado encontrado na Amazon', 'url': url, 'error_code': 'AMAZON_NO_DATA'}
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados da Amazon: {e}")
+            self.set_last_error("AMAZON_SCRAPE_EXCEPTION", "Erro ao extrair dados da Amazon", error=str(e))
             return {'error': str(e), 'url': url, 'error_code': 'AMAZON_SCRAPE_EXCEPTION'}
     
     def scrape_mercadolivre(self, url):
         """Extrai dados do Mercado Livre com Selenium"""
         try:
+            self.clear_last_error()
             # Primeiro tentar via requests
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_mercadolivre_requests(url)
@@ -971,6 +1011,8 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data = self.scrape_mercadolivre_requests(url)
                 if requests_data:
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Mercado Livre: {url}")
@@ -979,6 +1021,8 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     requests_data.setdefault('original_url', url)
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MERCADOLIVRE_NAV_FAIL'}
 
             try:
@@ -989,6 +1033,8 @@ window.chrome = window.chrome || { runtime: {} };
                         if requests_data:
                             requests_data.setdefault('original_url', url)
                             return requests_data
+                        if self.last_error:
+                            return {'url': url, **self.last_error}
                         return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
@@ -996,6 +1042,8 @@ window.chrome = window.chrome || { runtime: {} };
                     if requests_data:
                         requests_data.setdefault('original_url', url)
                         return requests_data
+                    if self.last_error:
+                        return {'url': url, **self.last_error}
                     return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
             except Exception:
                 pass
@@ -1045,19 +1093,25 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data.setdefault('original_url', url)
                 return requests_data
 
-            return data
+            if self.last_error:
+                return {'url': url, **self.last_error}
+            return {'error': 'Nenhum dado encontrado no Mercado Livre', 'url': url, 'error_code': 'MERCADOLIVRE_NO_DATA'}
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados do Mercado Livre: {e}")
+            self.set_last_error("MERCADOLIVRE_SCRAPE_EXCEPTION", "Erro ao extrair dados do Mercado Livre", error=str(e))
             return {'error': str(e), 'url': url, 'error_code': 'MERCADOLIVRE_SCRAPE_EXCEPTION'}
     
     def scrape_magazineluiza(self, url):
         """Extrai dados do Magazine Luiza com Selenium - Versão Simplificada"""
         try:
+            self.clear_last_error()
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 return {'error': 'Magazine Luiza bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MAGALU_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Magazine Luiza: {url}")
@@ -1066,6 +1120,8 @@ window.chrome = window.chrome || { runtime: {} };
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             if not self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10):
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MAGALU_NAV_FAIL'}
 
             try:
@@ -1287,15 +1343,21 @@ window.chrome = window.chrome || { runtime: {} };
             else:
                 logger.warning("Scraping Magazine Luiza parcial ou falhou")
             
-            return data
+            if self.has_any_data(data):
+                return data
+            if self.last_error:
+                return {'url': url, **self.last_error}
+            return {'error': 'Nenhum dado encontrado no Magazine Luiza', 'url': url, 'error_code': 'MAGALU_NO_DATA'}
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados do Magazine Luiza: {e}")
+            self.set_last_error("MAGALU_SCRAPE_EXCEPTION", "Erro ao extrair dados do Magazine Luiza", error=str(e))
             return {'error': str(e), 'url': url}
     
     def scrape_shopee(self, url):
         """Extrai dados do Shopee com Selenium"""
         try:
+            self.clear_last_error()
             # Primeiro tentar via requests
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_shopee_requests(url)
@@ -1311,6 +1373,8 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data = self.scrape_shopee_requests(url)
                 if requests_data:
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Shopee: {url}")
@@ -1319,6 +1383,8 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     requests_data.setdefault('original_url', url)
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'SHOPEE_NAV_FAIL'}
 
             try:
@@ -1329,6 +1395,8 @@ window.chrome = window.chrome || { runtime: {} };
                         if requests_data:
                             requests_data.setdefault('original_url', url)
                             return requests_data
+                        if self.last_error:
+                            return {'url': url, **self.last_error}
                         return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
@@ -1336,6 +1404,8 @@ window.chrome = window.chrome || { runtime: {} };
                     if requests_data:
                         requests_data.setdefault('original_url', url)
                         return requests_data
+                    if self.last_error:
+                        return {'url': url, **self.last_error}
                     return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
             except Exception:
                 pass
@@ -1387,10 +1457,13 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data.setdefault('original_url', url)
                 return requests_data
 
-            return data
+            if self.last_error:
+                return {'url': url, **self.last_error}
+            return {'error': 'Nenhum dado encontrado na Shopee', 'url': url, 'error_code': 'SHOPEE_NO_DATA'}
             
         except Exception as e:
             logger.error(f"Erro ao extrair dados do Shopee: {e}")
+            self.set_last_error("SHOPEE_SCRAPE_EXCEPTION", "Erro ao extrair dados da Shopee", error=str(e))
             return {'error': str(e), 'url': url, 'error_code': 'SHOPEE_SCRAPE_EXCEPTION'}
     
     def scrape_product(self, url):
@@ -1410,8 +1483,8 @@ window.chrome = window.chrome || { runtime: {} };
                 return self.scrape_magazineluiza(url)
             elif site == 'shopee':
                 return self.scrape_shopee(url)
-            else:
-                return {'error': f'Site não suportado: {site}', 'url': url}
+        else:
+            return {'error': f'Site não suportado: {site}', 'url': url, 'error_code': 'SITE_UNSUPPORTED'}
                 
         except Exception as e:
             logger.error(f"Erro no scraping: {e}")
