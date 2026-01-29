@@ -945,9 +945,9 @@ window.chrome = window.chrome || { runtime: {} };
             else:
                 # Procurar por links diretos do produto na página
                 try:
-                    all_links = self.driver.find_elements(By.TAG_NAME, 'a')
-                    logger.info(f"Verificando {len(all_links)} links na página...")
-                    
+                      all_links = self.driver.find_elements(By.TAG_NAME, 'a')
+                      logger.info(f"Verificando {len(all_links)} links na página...")
+
                       for link in all_links:
                           try:
                               href = link.get_attribute('href')
