@@ -1483,8 +1483,8 @@ window.chrome = window.chrome || { runtime: {} };
                 return self.scrape_magazineluiza(url)
             elif site == 'shopee':
                 return self.scrape_shopee(url)
-        else:
-            return {'error': f'Site não suportado: {site}', 'url': url, 'error_code': 'SITE_UNSUPPORTED'}
+            else:
+                return {'error': f'Site não suportado: {site}', 'url': url, 'error_code': 'SITE_UNSUPPORTED'}
                 
         except Exception as e:
             logger.error(f"Erro no scraping: {e}")
