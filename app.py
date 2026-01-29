@@ -49,6 +49,7 @@ APP_VERSION = os.environ.get('APP_VERSION') or read_version_file() or '0.0.0'
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+MERCADOLIVRE_USE_SELENIUM_IN_PROD = os.environ.get('MERCADOLIVRE_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -960,6 +961,11 @@ window.chrome = window.chrome || { runtime: {} };
         """Extrai dados do Mercado Livre com Selenium"""
         try:
             self.clear_last_error()
+            # Em produção, prefira requests para evitar timeout/memória
+            if IS_PRODUCTION and not MERCADOLIVRE_USE_SELENIUM_IN_PROD:
+                requests_data = self.scrape_mercadolivre_requests(url)
+                if requests_data:
+                    return requests_data
             # Primeiro tentar via requests
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_mercadolivre_requests(url)
