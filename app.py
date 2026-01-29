@@ -119,7 +119,8 @@ class FreeIslandScraper:
     def __init__(self):
         self.driver = None
         self.last_error = None
-        self.setup_driver()
+        if not IS_PRODUCTION:
+            self.setup_driver()
 
     def set_last_error(self, code, message, **details):
         self.last_error = {"error_code": code, "error": message}
