@@ -966,6 +966,9 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data = self.scrape_mercadolivre_requests(url)
                 if requests_data:
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
+                return {'error': 'Mercado Livre bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MERCADOLIVRE_BLOCKED_OR_EMPTY'}
             # Primeiro tentar via requests
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_mercadolivre_requests(url)
