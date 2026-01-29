@@ -2,6 +2,18 @@
 
 Aplicação web para extração de dados de produtos de e-commerce e geração de mensagens promocionais.
 
+## Versão
+
+Versão atual: **3.15.2** (fonte: `VERSION`)
+
+### Política de versionamento
+
+- correção -> `0.0.1`
+- coisa nova -> `0.1.0`
+- estrutura completamente nova -> `1.0.0`
+
+Atualize o arquivo `VERSION` a cada push.
+
 ## Funcionalidades
 
 - 🔐 Login seguro com credenciais específicas
@@ -20,6 +32,7 @@ Aplicação web para extração de dados de produtos de e-commerce e geração d
 
 ```
 ├── app.py                 # Aplicação principal Flask
+├── VERSION               # Versão atual do app
 ├── requirements.txt       # Dependências Python
 ├── Procfile              # Configuração do Render
 ├── runtime.txt           # Versão Python
