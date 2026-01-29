@@ -4,15 +4,8 @@ Aplicação web para extração de dados de produtos de e-commerce e geração d
 
 ## Versão
 
-Versão atual: **3.15.2** (fonte: `VERSION`)
+Versão atual: **3.15.2**
 
-### Política de versionamento
-
-- correção -> `0.0.1`
-- coisa nova -> `0.1.0`
-- estrutura completamente nova -> `1.0.0`
-
-Atualize o arquivo `VERSION` a cada push.
 
 ## Funcionalidades
 
@@ -26,7 +19,7 @@ Atualize o arquivo `VERSION` a cada push.
 - 🎫 Suporte para cupons de desconto
 - 🚚 Opção de frete grátis
 - 💾 Salvamento direto no Supabase
-- 📱 Interface responsiva e moderna
+- 📱 Interface web com login e dashboard
 
 ## Estrutura do Projeto
 
@@ -56,15 +49,7 @@ python app.py
 
 ## Configuração
 
-A aplicação está configurada para usar:
-
-- **Supabase**: Banco de dados para armazenamento
-- **Selenium**: WebDriver para scraping avançado
-- **Flask**: Framework web
-
-### Variáveis de ambiente obrigatórias
-
-Configure estas variáveis antes de subir para produção (Render):
+Variáveis de ambiente (produção/Render):
 
 - `FLASK_SECRET_KEY`
 - `SUPABASE_URL`
@@ -77,8 +62,8 @@ Configure estas variáveis antes de subir para produção (Render):
 O projeto está configurado para deploy no Render.com com as seguintes configurações:
 
 - **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn app:app`
-- **Python Version**: 3.11.7
+- **Start Command**: `gunicorn app:app --timeout 120 --workers 1 --threads 2 --max-requests 200 --max-requests-jitter 20`
+- **Python Version**: 3.11.7 (definida em `runtime.txt`)
 
 ## Uso
 
