@@ -855,9 +855,15 @@ window.chrome = window.chrome || { runtime: {} };
                     return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 # Em produção, evitar Selenium se explicitamente desabilitado
+                requests_data = self.scrape_amazon_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'AMAZON_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
+                requests_data = self.scrape_amazon_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             resolved_url = self.resolve_amazon_url(url)
@@ -870,9 +876,17 @@ window.chrome = window.chrome || { runtime: {} };
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
                     if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        requests_data = self.scrape_amazon_requests(resolved_url or url)
+                        if requests_data:
+                            requests_data.setdefault('original_url', url)
+                            return requests_data
                         return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
+                    requests_data = self.scrape_amazon_requests(resolved_url or url)
+                    if requests_data:
+                        requests_data.setdefault('original_url', url)
+                        return requests_data
                     return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
             except Exception:
                 pass
@@ -939,9 +953,15 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
+                requests_data = self.scrape_mercadolivre_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'Mercado Livre bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MERCADOLIVRE_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
+                requests_data = self.scrape_mercadolivre_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Mercado Livre: {url}")
@@ -951,9 +971,17 @@ window.chrome = window.chrome || { runtime: {} };
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
                     if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        requests_data = self.scrape_mercadolivre_requests(url)
+                        if requests_data:
+                            requests_data.setdefault('original_url', url)
+                            return requests_data
                         return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
+                    requests_data = self.scrape_mercadolivre_requests(url)
+                    if requests_data:
+                        requests_data.setdefault('original_url', url)
+                        return requests_data
                     return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
             except Exception:
                 pass
@@ -1259,9 +1287,15 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
+                requests_data = self.scrape_shopee_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'Shopee bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'SHOPEE_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
+                requests_data = self.scrape_shopee_requests(url)
+                if requests_data:
+                    return requests_data
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Shopee: {url}")
@@ -1271,9 +1305,17 @@ window.chrome = window.chrome || { runtime: {} };
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
                     if self.retry_if_blocked(wait_seconds=2, ready_timeout=10):
+                        requests_data = self.scrape_shopee_requests(url)
+                        if requests_data:
+                            requests_data.setdefault('original_url', url)
+                            return requests_data
                         return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
                     page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
+                    requests_data = self.scrape_shopee_requests(url)
+                    if requests_data:
+                        requests_data.setdefault('original_url', url)
+                        return requests_data
                     return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
             except Exception:
                 pass
