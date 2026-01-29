@@ -133,6 +133,9 @@ class FreeIslandScraper:
         options = Options()
         headless_arg = '--headless=new' if production else '--headless'
         options.add_argument(headless_arg)
+        chrome_binary = os.environ.get('CHROME_BINARY')
+        if chrome_binary:
+            options.binary_location = chrome_binary
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
@@ -151,6 +154,9 @@ class FreeIslandScraper:
             'intl.accept_languages': 'pt-BR,pt',
             'profile.default_content_setting_values.notifications': 2
         })
+        # Garantir que binary_location seja string
+        if getattr(options, "binary_location", None) is not None and not isinstance(options.binary_location, str):
+            options.binary_location = str(options.binary_location)
         return options
 
     def setup_driver(self):
