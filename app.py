@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 IS_PRODUCTION = os.environ.get('RENDER') == 'true'
 BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
 APP_VERSION = os.environ.get('APP_VERSION', '0.0.0')
+ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -102,22 +103,38 @@ class FreeIslandScraper:
     def __init__(self):
         self.driver = None
         self.setup_driver()
-    
+
+    def build_chrome_options(self, production=False, user_agent=None):
+        options = Options()
+        headless_arg = '--headless=new' if production else '--headless'
+        options.add_argument(headless_arg)
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-infobars')
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--lang=pt-BR,pt')
+        if user_agent:
+            options.add_argument(f'--user-agent={user_agent}')
+        options.add_experimental_option('excludeSwitches', ['enable-automation'])
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_experimental_option('prefs', {
+            'intl.accept_languages': 'pt-BR,pt',
+            'profile.default_content_setting_values.notifications': 2
+        })
+        return options
+
     def setup_driver(self):
         """Configura o Selenium WebDriver para deploy no Render"""
         if IS_PRODUCTION:
             # Configuração para Render
-            options = Options()
-            options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--window-size=1920,1080')
-            options.add_argument('--disable-extensions')
-            options.add_argument('--disable-plugins')
-            options.add_argument('--disable-images')
-            options.add_argument('--disable-javascript')
-            options.add_argument('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            options = self.build_chrome_options(
+                production=True,
+                user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
             
             uc = None
             try:
@@ -142,15 +159,13 @@ class FreeIslandScraper:
                 except Exception as e2:
                     logger.error(f"Todos os drivers falharam: {e2}")
                     self.driver = None
+            self.harden_driver()
         else:
             # Configuração para desenvolvimento local
-            options = Options()
-            options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--window-size=1920,1080')
-            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            options = self.build_chrome_options(
+                production=False,
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
             
             try:
                 service = Service(ChromeDriverManager().install())
@@ -159,6 +174,18 @@ class FreeIslandScraper:
             except Exception as e:
                 logger.error(f"Erro ao inicializar WebDriver local: {e}")
                 self.driver = None
+            self.harden_driver()
+
+    def harden_driver(self):
+        if not self.driver:
+            return
+        try:
+            self.driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"}
+            )
+        except Exception as e:
+            logger.debug(f"Falha ao aplicar hardening do driver: {e}")
     
     def identify_site(self, url):
         """Identifica o site pela URL"""
@@ -749,15 +776,27 @@ class FreeIslandScraper:
             requests_data = self.scrape_mercadolivre_requests(url)
             if requests_data:
                 return requests_data
-            if IS_PRODUCTION:
+            if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 return {'error': 'Mercado Livre bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MERCADOLIVRE_BLOCKED_OR_EMPTY'}
 
             if not self.ensure_driver():
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Mercado Livre: {url}")
-            self.driver.get(url)
-            time.sleep(3)
+            self.driver.set_page_load_timeout(20)
+            try:
+                self.driver.get(url)
+            except TimeoutException:
+                logger.warning("Timeout no carregamento do Mercado Livre (Selenium), continuando...")
+            time.sleep(2)
+            self.wait_ready(timeout=8)
+
+            try:
+                page_source = self.driver.page_source.lower()
+                if 'captcha' in page_source or 'robot' in page_source:
+                    return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
+            except Exception:
+                pass
             
             data = {'url': url}
             
