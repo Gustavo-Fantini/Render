@@ -231,6 +231,22 @@ window.chrome = window.chrome || { runtime: {} };
             self.driver.execute_script("window.scrollTo(0, 0);")
         except Exception:
             pass
+
+    def retry_if_blocked(self, wait_seconds=2, ready_timeout=8):
+        """Tenta um refresh simples quando detecta bloqueio/captcha"""
+        try:
+            page_source = self.driver.page_source
+            if self.is_blocked_page(page_source):
+                logger.warning("Bloqueio detectado, tentando refresh...")
+                self.driver.refresh()
+                time.sleep(wait_seconds)
+                self.wait_ready(timeout=ready_timeout)
+                page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
+                    return True
+        except Exception:
+            pass
+        return False
     
     def identify_site(self, url):
         """Identifica o site pela URL"""
@@ -371,6 +387,9 @@ window.chrome = window.chrome || { runtime: {} };
         except TimeoutException:
             logger.warning("Timeout aguardando document.readyState, continuando...")
 
+    def has_any_data(self, data):
+        return any(data.get(k) for k in ("title", "price", "image_url"))
+
     def first_text_by_selectors(self, selectors, min_len=1):
         """Retorna o primeiro texto encontrado para a lista de seletores"""
         for selector in selectors:
@@ -392,8 +411,47 @@ window.chrome = window.chrome || { runtime: {} };
                 for element in elements:
                     for attr in attrs:
                         val = element.get_attribute(attr)
-                        if val and 'http' in val:
+                        if val and 'http' in val and not val.startswith('data:'):
                             return val
+            except Exception:
+                continue
+        return None
+
+    def extract_title_from_selectors(self, selectors, min_len=5, max_len=300):
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    title = element.text.strip()
+                    if title and min_len <= len(title) <= max_len:
+                        return title
+            except Exception:
+                continue
+        return None
+
+    def extract_price_from_selectors(self, selectors):
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    price_text = element.text.strip()
+                    if price_text and any(c.isdigit() for c in price_text):
+                        price_text = self.normalize_price_text(price_text)
+                        formatted, price_val = self.clean_price(price_text)
+                        if formatted and price_val:
+                            return formatted, price_val
+            except Exception:
+                continue
+        return None, None
+
+    def extract_image_from_selectors(self, selectors):
+        for selector in selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    img_src = element.get_attribute('src') or element.get_attribute('data-src')
+                    if img_src and 'http' in img_src and not img_src.startswith('data:'):
+                        return img_src
             except Exception:
                 continue
         return None
@@ -811,6 +869,10 @@ window.chrome = window.chrome || { runtime: {} };
             try:
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
+                    if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
+                    page_source = self.driver.page_source
+                if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
                     return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
             except Exception:
                 pass
@@ -818,7 +880,7 @@ window.chrome = window.chrome || { runtime: {} };
             data = {'url': url, 'resolved_url': resolved_url}
             
             # Título
-            title = self.first_text_by_selectors([
+            title = self.extract_title_from_selectors([
                 '#productTitle',
                 'h1#productTitle',
                 '.a-size-large.product-title-word-break',
@@ -841,7 +903,7 @@ window.chrome = window.chrome || { runtime: {} };
                     logger.info(f"Preço encontrado: {price_text} -> {formatted}")
             
             # Imagem
-            img_src = self.first_attr_by_selectors([
+            img_src = self.extract_image_from_selectors([
                 '#landingImage',
                 '#imgTagWrapperId img',
                 '.a-dynamic-image',
@@ -852,7 +914,7 @@ window.chrome = window.chrome || { runtime: {} };
                 data['image_url'] = img_src
                 logger.info(f"Imagem encontrada: {img_src}")
 
-            if any(data.get(k) for k in ('title', 'price', 'image_url')):
+            if self.has_any_data(data):
                 return data
 
             # Fallback com requests quando Selenium não retorna dados
@@ -888,6 +950,10 @@ window.chrome = window.chrome || { runtime: {} };
             try:
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
+                    if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
+                    page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
                     return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
             except Exception:
                 pass
@@ -900,19 +966,10 @@ window.chrome = window.chrome || { runtime: {} };
                 'h1.ui-pdp-title',
                 '.ui-pdp-title'
             ]
-            
-            for selector in title_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    title = element.text.strip()
-                    if title and len(title) > 5:
-                        data['title'] = title
-                        logger.info(f"Título encontrado: {title}")
-                        break
-                except TimeoutException:
-                    continue
+            title = self.extract_title_from_selectors(title_selectors, min_len=5)
+            if title:
+                data['title'] = title
+                logger.info(f"Título encontrado: {title}")
             
             # Preço
             price_selectors = [
@@ -920,22 +977,11 @@ window.chrome = window.chrome || { runtime: {} };
                 '.poly-price__current .andes-money-amount__fraction',
                 '.ui-pdp-price__current .andes-money-amount__fraction'
             ]
-            
-            for selector in price_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    price_text = element.text.strip()
-                    if price_text:
-                        formatted, price_val = self.clean_price(price_text)
-                        if formatted:
-                            data['price'] = formatted
-                            data['price_value'] = price_val
-                            logger.info(f"Preço encontrado: {price_text} -> {formatted}")
-                            break
-                except TimeoutException:
-                    continue
+            formatted, price_val = self.extract_price_from_selectors(price_selectors)
+            if formatted:
+                data['price'] = formatted
+                data['price_value'] = price_val
+                logger.info(f"Preço encontrado: {formatted}")
             
             # Imagem
             image_selectors = [
@@ -943,20 +989,20 @@ window.chrome = window.chrome || { runtime: {} };
                 '.ui-pdp-gallery__figure__image',
                 'img[src*="http2.mlstatic.com"]'
             ]
-            
-            for selector in image_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    img_src = element.get_attribute('src') or element.get_attribute('data-src')
-                    if img_src and 'http' in img_src:
-                        data['image_url'] = img_src
-                        logger.info(f"Imagem encontrada: {img_src}")
-                        break
-                except TimeoutException:
-                    continue
-            
+            img_src = self.extract_image_from_selectors(image_selectors)
+            if img_src:
+                data['image_url'] = img_src
+                logger.info(f"Imagem encontrada: {img_src}")
+
+            if self.has_any_data(data):
+                return data
+
+            # Fallback com requests quando Selenium não retorna dados
+            requests_data = self.scrape_mercadolivre_requests(url)
+            if requests_data:
+                requests_data.setdefault('original_url', url)
+                return requests_data
+
             return data
             
         except Exception as e:
@@ -981,6 +1027,10 @@ window.chrome = window.chrome || { runtime: {} };
 
             try:
                 page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
+                    if self.retry_if_blocked(wait_seconds=2, ready_timeout=8):
+                        return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
+                    page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
                     return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
             except Exception:
@@ -1220,6 +1270,10 @@ window.chrome = window.chrome || { runtime: {} };
             try:
                 page_source = self.driver.page_source
                 if self.is_blocked_page(page_source):
+                    if self.retry_if_blocked(wait_seconds=2, ready_timeout=10):
+                        return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
+                    page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
                     return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
             except Exception:
                 pass
@@ -1232,19 +1286,10 @@ window.chrome = window.chrome || { runtime: {} };
                 '.product-briefing__title',
                 'h1'
             ]
-            
-            for selector in title_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    title = element.text.strip()
-                    if title and len(title) > 5:
-                        data['title'] = title
-                        logger.info(f"Título encontrado: {title}")
-                        break
-                except TimeoutException:
-                    continue
+            title = self.extract_title_from_selectors(title_selectors, min_len=5)
+            if title:
+                data['title'] = title
+                logger.info(f"Título encontrado: {title}")
             
             # Preço
             price_selectors = [
@@ -1254,23 +1299,11 @@ window.chrome = window.chrome || { runtime: {} };
                 '.current-price',
                 '.product-briefing__price .current-price'
             ]
-            
-            for selector in price_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    price_text = element.text.strip()
-                    if price_text:
-                        price_text = self.normalize_price_text(price_text)
-                        formatted, price_val = self.clean_price(price_text)
-                        if formatted:
-                            data['price'] = formatted
-                            data['price_value'] = price_val
-                            logger.info(f"Preço encontrado: {price_text} -> {formatted}")
-                            break
-                except TimeoutException:
-                    continue
+            formatted, price_val = self.extract_price_from_selectors(price_selectors)
+            if formatted:
+                data['price'] = formatted
+                data['price_value'] = price_val
+                logger.info(f"Preço encontrado: {formatted}")
             
             # Imagem
             image_selectors = [
@@ -1278,20 +1311,20 @@ window.chrome = window.chrome || { runtime: {} };
                 '.product-briefing__image',
                 'img[src*="susercontent"]'
             ]
-            
-            for selector in image_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    img_src = element.get_attribute('src') or element.get_attribute('data-src')
-                    if img_src and 'http' in img_src:
-                        data['image_url'] = img_src
-                        logger.info(f"Imagem encontrada: {img_src}")
-                        break
-                except TimeoutException:
-                    continue
-            
+            img_src = self.extract_image_from_selectors(image_selectors)
+            if img_src:
+                data['image_url'] = img_src
+                logger.info(f"Imagem encontrada: {img_src}")
+
+            if self.has_any_data(data):
+                return data
+
+            # Fallback com requests quando Selenium não retorna dados
+            requests_data = self.scrape_shopee_requests(url)
+            if requests_data:
+                requests_data.setdefault('original_url', url)
+                return requests_data
+
             return data
             
         except Exception as e:
