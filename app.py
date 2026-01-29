@@ -948,15 +948,15 @@ window.chrome = window.chrome || { runtime: {} };
                     all_links = self.driver.find_elements(By.TAG_NAME, 'a')
                     logger.info(f"Verificando {len(all_links)} links na página...")
                     
-                    for link in all_links:
-                        try:
-                            href = link.get_attribute('href')
-                            if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
-                                logger.info(f"Link do produto encontrado: {href}")
+                      for link in all_links:
+                          try:
+                              href = link.get_attribute('href')
+                              if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
+                                  logger.info(f"Link do produto encontrado: {href}")
                                   self.navigate_with_wait(href, wait_seconds=3, ready_timeout=8)
                                   break
-                        except:
-                            continue
+                          except:
+                              continue
                 except Exception as e:
                     logger.debug(f"Erro ao procurar links: {e}")
             
