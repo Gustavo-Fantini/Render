@@ -751,6 +751,18 @@ window.chrome = window.chrome || { runtime: {} };
                     candidate = canonical.get('href')
                 elif og_url and og_url.get('content'):
                     candidate = og_url.get('content')
+                if not candidate:
+                    # Tentar extrair URL de produto no HTML
+                    patterns = [
+                        r'https?://(?:www\.)?mercadolivre\.com\.br/[^"\s>]+/p/[^"\s>]+',
+                        r'https?://(?:www\.)?mercadolivre\.com\.br/[^"\s>]+/MLB-\d+[^"\s>]*',
+                        r'https?://produto\.mercadolivre\.com\.br/MLB-\d+[^"\s>]*'
+                    ]
+                    for pattern in patterns:
+                        match = re.search(pattern, response.text)
+                        if match:
+                            candidate = match.group(0)
+                            break
                 if candidate:
                     return candidate
 
