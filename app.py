@@ -223,6 +223,9 @@ window.chrome = window.chrome || { runtime: {} };
             self.driver.get(url)
         except TimeoutException:
             logger.warning("Timeout no carregamento (Selenium), continuando...")
+        except Exception as e:
+            logger.warning(f"Falha ao carregar URL no Selenium: {e}")
+            return False
         time.sleep(wait_seconds)
         self.wait_ready(timeout=ready_timeout)
         try:
@@ -231,6 +234,7 @@ window.chrome = window.chrome || { runtime: {} };
             self.driver.execute_script("window.scrollTo(0, 0);")
         except Exception:
             pass
+        return True
 
     def retry_if_blocked(self, wait_seconds=2, ready_timeout=8):
         """Tenta um refresh simples quando detecta bloqueio/captcha"""
@@ -868,7 +872,12 @@ window.chrome = window.chrome || { runtime: {} };
 
             resolved_url = self.resolve_amazon_url(url)
             logger.info(f"Acessando Amazon: {url} -> {resolved_url}")
-            self.navigate_with_wait(resolved_url, wait_seconds=2, ready_timeout=8)
+            if not self.navigate_with_wait(resolved_url, wait_seconds=2, ready_timeout=8):
+                requests_data = self.scrape_amazon_requests(resolved_url or url)
+                if requests_data:
+                    requests_data.setdefault('original_url', url)
+                    return requests_data
+                return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'AMAZON_NAV_FAIL'}
             self.try_accept_amazon_cookies()
 
             # Detectar possível captcha/bloqueio
@@ -965,7 +974,12 @@ window.chrome = window.chrome || { runtime: {} };
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Mercado Livre: {url}")
-            self.navigate_with_wait(url, wait_seconds=2, ready_timeout=8)
+            if not self.navigate_with_wait(url, wait_seconds=2, ready_timeout=8):
+                requests_data = self.scrape_mercadolivre_requests(url)
+                if requests_data:
+                    requests_data.setdefault('original_url', url)
+                    return requests_data
+                return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MERCADOLIVRE_NAV_FAIL'}
 
             try:
                 page_source = self.driver.page_source
@@ -1051,7 +1065,8 @@ window.chrome = window.chrome || { runtime: {} };
             # Configurar driver para Magazine Luiza
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
-            self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10)
+            if not self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10):
+                return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MAGALU_NAV_FAIL'}
 
             try:
                 page_source = self.driver.page_source
@@ -1299,7 +1314,12 @@ window.chrome = window.chrome || { runtime: {} };
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Shopee: {url}")
-            self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10)
+            if not self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10):
+                requests_data = self.scrape_shopee_requests(url)
+                if requests_data:
+                    requests_data.setdefault('original_url', url)
+                    return requests_data
+                return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'SHOPEE_NAV_FAIL'}
 
             try:
                 page_source = self.driver.page_source
