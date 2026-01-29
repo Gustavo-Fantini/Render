@@ -913,6 +913,13 @@ window.chrome = window.chrome || { runtime: {} };
     def scrape_magalu_requests(self, url):
         """Extrai dados do Magazine Luiza via requests (mais leve que Selenium)"""
         self.clear_last_error()
+        # Resolver links de divulgador via HEAD (geralmente redireciona para a página real)
+        try:
+            head = requests.head(url, allow_redirects=True, timeout=8)
+            if head.url:
+                url = head.url
+        except Exception:
+            pass
         base_headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -954,6 +961,9 @@ window.chrome = window.chrome || { runtime: {} };
 
             html = response.text
             lower_html = html.lower()
+            if 'az-request-verify' in response.url:
+                self.set_last_error("MAGALU_REQUESTS_AZ_VERIFY", "Redirecionado para verificação anti-bot (requests)", final_url=response.url)
+                return None
             if 'captcha' in lower_html or 'robot' in lower_html or 'access denied' in lower_html:
                 log_event(logging.WARNING, "magalu_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 # Tentar uma segunda vez com headers mobile
@@ -963,6 +973,9 @@ window.chrome = window.chrome || { runtime: {} };
                     response = session.get(url, timeout=12, allow_redirects=True)
                     html = response.text
                     lower_html = html.lower()
+                    if 'az-request-verify' in response.url:
+                        self.set_last_error("MAGALU_REQUESTS_AZ_VERIFY", "Redirecionado para verificação anti-bot (requests)", final_url=response.url)
+                        return None
                     if 'captcha' in lower_html or 'robot' in lower_html or 'access denied' in lower_html:
                         self.set_last_error("MAGALU_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                         return None
@@ -1289,6 +1302,11 @@ window.chrome = window.chrome || { runtime: {} };
                 if requests_data:
                     return requests_data
                 return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'MAGALU_NAV_FAIL'}
+
+            # Se o driver parou em página de verificação, não adianta continuar
+            current_url = self.driver.current_url
+            if current_url and 'az-request-verify' in current_url:
+                return {'error': 'Magazine Luiza apresentou verificação anti-bot', 'url': url, 'error_code': 'MAGALU_AZ_VERIFY'}
 
             try:
                 page_source = self.driver.page_source
