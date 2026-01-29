@@ -4,7 +4,7 @@ Aplicação web para extração de dados de produtos de e-commerce e geração d
 
 ## Versão
 
-Versão atual: **3.15.2**
+Versão atual: **3.15.3**
 
 
 ## Funcionalidades

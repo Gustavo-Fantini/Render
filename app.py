@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 IS_PRODUCTION = os.environ.get('RENDER') == 'true'
 BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
+PROD_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_PROD_DELAY_SECONDS', '0'))
 # Versionamento:
 # correção -> 0.0.1 | coisa nova -> 0.1.0 | estrutura completamente nova -> 1.0.0
 # Atualize o arquivo VERSION a cada push.
@@ -1482,9 +1483,10 @@ window.chrome = window.chrome || { runtime: {} };
         try:
             site = self.identify_site(url)
             logger.info(f"Site identificado: {site}")
-            if BASE_SCRAPE_DELAY_SECONDS > 0:
-                logger.info(f"Aguardando base delay de {BASE_SCRAPE_DELAY_SECONDS}s antes do scraping")
-                time.sleep(BASE_SCRAPE_DELAY_SECONDS)
+            delay = PROD_SCRAPE_DELAY_SECONDS if IS_PRODUCTION else BASE_SCRAPE_DELAY_SECONDS
+            if delay > 0:
+                logger.info(f"Aguardando delay de {delay}s antes do scraping")
+                time.sleep(delay)
             
             if site == 'amazon':
                 return self.scrape_amazon(url)
