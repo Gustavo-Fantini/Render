@@ -601,7 +601,14 @@ window.chrome = window.chrome || { runtime: {} };
             price_el = soup.select_one('#corePriceDisplay_desktop_feature_div .priceToPay .aok-offscreen') \
                 or soup.select_one('#corePriceDisplay_desktop_feature_div .priceToPay .a-offscreen') \
                 or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .aok-offscreen') \
-                or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .a-offscreen')
+                or soup.select_one('#corePriceDisplay_desktop_feature_div .a-price .a-offscreen') \
+                or soup.select_one('#apex_desktop #apex_price .aok-offscreen') \
+                or soup.select_one('#apex_desktop #apex_price .a-offscreen') \
+                or soup.select_one('span.a-price > span.a-offscreen') \
+                or soup.select_one('span.a-price span.a-offscreen') \
+                or soup.select_one('#priceblock_ourprice') \
+                or soup.select_one('#priceblock_dealprice') \
+                or soup.select_one('#priceblock_saleprice')
             price_text = price_el.get_text(strip=True) if price_el else None
             if not price_text:
                 symbol = soup.select_one('#corePriceDisplay_desktop_feature_div .a-price-symbol')
@@ -625,6 +632,19 @@ window.chrome = window.chrome || { runtime: {} };
                 meta_price = soup.select_one('meta[property="product:price:amount"]') or soup.select_one('meta[property="og:price:amount"]')
                 if meta_price and meta_price.get('content'):
                     price_text = f"R$ {meta_price.get('content')}"
+            if not price_text:
+                # Fallback extra: JSON-LD
+                try:
+                    for script in soup.select('script[type="application/ld+json"]'):
+                        if not script.string:
+                            continue
+                        if '"price"' in script.string and '"priceCurrency"' in script.string:
+                            match = re.search(r'"price"\s*:\s*"?(\\d+[\\d.,]*)"?', script.string)
+                            if match:
+                                price_text = f"R$ {match.group(1)}"
+                                break
+                except Exception:
+                    pass
 
             if price_text:
                 formatted, price_val = self.clean_price(price_text)
