@@ -6,6 +6,7 @@ import re
 import json
 from datetime import datetime
 import uuid
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -570,7 +571,8 @@ window.chrome = window.chrome || { runtime: {} };
         }
         try:
             start = time.time()
-            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            resolved_url = self.resolve_mercadolivre_url(url)
+            response = requests.get(resolved_url, headers=headers, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -602,7 +604,7 @@ window.chrome = window.chrome || { runtime: {} };
             )
 
             soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': url, 'resolved_url': response.url or url}
+            data = {'url': url, 'resolved_url': response.url or resolved_url or url}
 
             title_el = soup.select_one('#productTitle') or soup.select_one('#title span') or soup.select_one('#title')
             if title_el:
@@ -719,6 +721,49 @@ window.chrome = window.chrome || { runtime: {} };
         except Exception:
             pass
         return url
+
+    def resolve_mercadolivre_url(self, url):
+        """Resolve links encurtados/social do Mercado Livre para URL canônica do produto"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close"
+        }
+        resolved = url
+        try:
+            response = requests.head(url, headers=headers, timeout=8, allow_redirects=True)
+            if response.url:
+                resolved = response.url
+        except Exception:
+            pass
+
+        # Se caiu em página social/forçada, tentar canônica
+        try:
+            parsed = urlparse(resolved)
+            if '/social/' in parsed.path or 'forceInApp' in parsed.query or 'matt_' in parsed.query:
+                response = requests.get(resolved, headers=headers, timeout=10, allow_redirects=True)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                canonical = soup.select_one('link[rel="canonical"]')
+                og_url = soup.select_one('meta[property="og:url"]')
+                candidate = None
+                if canonical and canonical.get('href'):
+                    candidate = canonical.get('href')
+                elif og_url and og_url.get('content'):
+                    candidate = og_url.get('content')
+                if candidate:
+                    return candidate
+
+                # Remover parâmetros de tracking
+                q = parse_qs(parsed.query)
+                for k in ['forceInApp', 'ref', 'matt_word', 'matt_tool', 'origin']:
+                    q.pop(k, None)
+                cleaned = parsed._replace(query=urlencode(q, doseq=True))
+                return urlunparse(cleaned)
+        except Exception:
+            pass
+
+        return resolved
 
     def try_accept_amazon_cookies(self):
         """Tenta aceitar banner de cookies da Amazon (quando aparece)"""
