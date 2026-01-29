@@ -913,15 +913,31 @@ window.chrome = window.chrome || { runtime: {} };
     def scrape_magalu_requests(self, url):
         """Extrai dados do Magazine Luiza via requests (mais leve que Selenium)"""
         self.clear_last_error()
-        headers = {
+        base_headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Connection": "close"
+            "Connection": "close",
+            "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://www.magazineluiza.com.br/"
+        }
+        mobile_headers = {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "close",
+            "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://m.magazineluiza.com.br/"
         }
         try:
             start = time.time()
-            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            session = requests.Session()
+            session.headers.update(base_headers)
+            try:
+                session.get("https://www.magazineluiza.com.br/", timeout=8)
+            except Exception:
+                pass
+            response = session.get(url, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -940,8 +956,19 @@ window.chrome = window.chrome || { runtime: {} };
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot' in lower_html or 'access denied' in lower_html:
                 log_event(logging.WARNING, "magalu_requests_blocked", reason="captcha_or_robot", final_url=response.url)
-                self.set_last_error("MAGALU_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
-                return None
+                # Tentar uma segunda vez com headers mobile
+                try:
+                    session = requests.Session()
+                    session.headers.update(mobile_headers)
+                    response = session.get(url, timeout=12, allow_redirects=True)
+                    html = response.text
+                    lower_html = html.lower()
+                    if 'captcha' in lower_html or 'robot' in lower_html or 'access denied' in lower_html:
+                        self.set_last_error("MAGALU_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
+                        return None
+                except Exception:
+                    self.set_last_error("MAGALU_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
+                    return None
 
             soup = BeautifulSoup(html, 'html.parser')
             data = {'url': url, 'resolved_url': response.url or url}
