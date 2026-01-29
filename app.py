@@ -49,6 +49,7 @@ APP_VERSION = os.environ.get('APP_VERSION') or read_version_file() or '0.0.0'
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+SHOPEE_USE_SELENIUM_IN_PROD = os.environ.get('SHOPEE_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -635,6 +636,18 @@ window.chrome = window.chrome || { runtime: {} };
                     if fraction_text:
                         price_text += f",{fraction_text}"
             if not price_text:
+                # Fallback mais amplo: procurar partes de preço em qualquer bloco
+                symbol = soup.select_one('.a-price-symbol')
+                whole = soup.select_one('.a-price-whole')
+                fraction = soup.select_one('.a-price-fraction')
+                if whole:
+                    symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
+                    whole_text = whole.get_text(strip=True).rstrip(',.')
+                    fraction_text = fraction.get_text(strip=True) if fraction else ''
+                    price_text = f"{symbol_text} {whole_text}"
+                    if fraction_text:
+                        price_text += f",{fraction_text}"
+            if not price_text:
                 # Fallback: apex_price (às vezes aparece no centro do ATF)
                 apex_offscreen = soup.select_one('#apex_desktop #apex_price .aok-offscreen') \
                     or soup.select_one('#apex_desktop #apex_price .a-offscreen')
@@ -830,7 +843,7 @@ window.chrome = window.chrome || { runtime: {} };
         """Extrai dados do Shopee via requests"""
         self.clear_last_error()
         headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Connection": "close"
@@ -854,7 +867,7 @@ window.chrome = window.chrome || { runtime: {} };
 
             html = response.text
             lower_html = html.lower()
-            if 'captcha' in lower_html or 'robot' in lower_html:
+            if 'captcha' in lower_html or 'robot' in lower_html or 'login' in lower_html:
                 log_event(logging.WARNING, "shopee_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 self.set_last_error("SHOPEE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                 return None
@@ -1157,6 +1170,11 @@ window.chrome = window.chrome || { runtime: {} };
         """Extrai dados do Shopee com Selenium"""
         try:
             self.clear_last_error()
+            # Em produção, prefira requests com UA mobile para evitar tela de login
+            if IS_PRODUCTION and not SHOPEE_USE_SELENIUM_IN_PROD:
+                requests_data = self.scrape_shopee_requests(url)
+                if requests_data:
+                    return requests_data
             # Primeiro tentar via requests
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_shopee_requests(url)
