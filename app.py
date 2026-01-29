@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 IS_PRODUCTION = os.environ.get('RENDER') == 'true'
 BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
+APP_VERSION = os.environ.get('APP_VERSION', '0.0.0')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -47,6 +48,13 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 if IS_PRODUCTION:
     app.config['SESSION_COOKIE_SECURE'] = True
 CORS(app)
+
+@app.context_processor
+def inject_app_meta():
+    return {
+        "app_version": APP_VERSION,
+        "current_year": datetime.utcnow().year
+    }
 
 # Configurações Supabase
 SUPABASE_URL = get_env('SUPABASE_URL', default='', required=IS_PRODUCTION)
