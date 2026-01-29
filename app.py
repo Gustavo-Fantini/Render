@@ -49,7 +49,6 @@ APP_VERSION = os.environ.get('APP_VERSION') or read_version_file() or '0.0.0'
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
 ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
-SHOPEE_USE_SELENIUM_IN_PROD = os.environ.get('SHOPEE_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -313,9 +312,6 @@ window.chrome = window.chrome || { runtime: {} };
             return 'mercadolivre'
         elif any(d in domain for d in ['amazon.com.br', 'amzn.to']):
             return 'amazon'
-        elif any(d in domain for d in ['shopee.com.br', 's.shopee.com.br']):
-            return 'shopee'
-
         logger.warning(f"Site não reconhecido para URL: {url} - Domínio: {domain}")
         return 'unknown'
     
@@ -839,102 +835,6 @@ window.chrome = window.chrome || { runtime: {} };
 
         return None
 
-    def scrape_shopee_requests(self, url):
-        """Extrai dados do Shopee via requests"""
-        self.clear_last_error()
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Connection": "close"
-        }
-        try:
-            start = time.time()
-            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
-            elapsed_ms = int((time.time() - start) * 1000)
-            log_event(
-                logging.INFO,
-                "shopee_requests_response",
-                status=response.status_code,
-                elapsed_ms=elapsed_ms,
-                final_url=response.url,
-                content_length=len(response.text or "")
-            )
-            if response.status_code != 200:
-                log_event(logging.WARNING, "shopee_requests_non_200", status=response.status_code, final_url=response.url)
-                self.set_last_error("SHOPEE_REQUESTS_NON_200", "Resposta não-200 da Shopee (requests)", status=response.status_code, final_url=response.url)
-                return None
-
-            html = response.text
-            lower_html = html.lower()
-            if 'captcha' in lower_html or 'robot' in lower_html or 'login' in lower_html:
-                log_event(logging.WARNING, "shopee_requests_blocked", reason="captcha_or_robot", final_url=response.url)
-                self.set_last_error("SHOPEE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
-                return None
-            log_event(
-                logging.INFO,
-                "shopee_requests_html_markers",
-                has_vR6K3w=("vR6K3w" in html),
-                has_IZPeQz_B67UQ0=("IZPeQz B67UQ0" in html),
-                has_IZPeQz=("IZPeQz" in html),
-                has_pdp_product_title=('data-testid="pdp-product-title"' in html),
-                has_pdp_price=('data-testid="pdp-price"' in html),
-                has_og_title=('property="og:title"' in html),
-                has_og_image=('property="og:image"' in html),
-                final_url=response.url
-            )
-
-            soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': url, 'resolved_url': response.url or url}
-
-            title_el = (
-                soup.select_one('meta[property="og:title"]')
-                or soup.select_one('h1.vR6K3w')
-                or soup.select_one('span[data-testid="pdp-product-title"]')
-                or soup.select_one('h1')
-            )
-            if title_el:
-                title = title_el.get('content') if title_el.name == 'meta' else title_el.get_text(strip=True)
-                if title:
-                    data['title'] = title
-
-            price_text = None
-            meta_price = soup.select_one('meta[property="product:price:amount"]') or soup.select_one('meta[property="og:price:amount"]')
-            if meta_price and meta_price.get('content'):
-                price_text = f"R$ {meta_price.get('content')}"
-            if not price_text:
-                price_el = soup.select_one('div.IZPeQz.B67UQ0') or soup.select_one('div.IZPeQz') or soup.select_one('span[data-testid="pdp-price"]')
-                if price_el:
-                    price_text = self.normalize_price_text(price_el.get_text(strip=True))
-
-            if price_text:
-                formatted, price_val = self.clean_price(price_text)
-                if formatted:
-                    data['price'] = formatted
-                    data['price_value'] = price_val
-
-            img_src = None
-            og_img = soup.select_one('meta[property="og:image"]')
-            if og_img:
-                img_src = og_img.get('content')
-            if not img_src:
-                img_el = soup.select_one('img[src*="susercontent.com/file"]')
-                if img_el:
-                    img_src = img_el.get('src') or img_el.get('data-src')
-            if img_src and 'http' in img_src:
-                data['image_url'] = img_src
-
-            if any(data.get(k) for k in ('title', 'price', 'image_url')):
-                log_event(logging.INFO, "shopee_requests_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
-                return data
-            log_event(logging.WARNING, "shopee_requests_no_data", final_url=response.url)
-            self.set_last_error("SHOPEE_REQUESTS_NO_DATA", "Nenhum dado encontrado (requests)", final_url=response.url)
-        except Exception as e:
-            log_event(logging.ERROR, "shopee_requests_exception", error=str(e))
-            self.set_last_error("SHOPEE_REQUESTS_EXCEPTION", "Erro ao requisitar Shopee (requests)", error=str(e))
-
-        return None
-
     def scrape_amazon(self, url):
         """Extrai dados da Amazon com Selenium"""
         try:
@@ -1166,123 +1066,6 @@ window.chrome = window.chrome || { runtime: {} };
             self.set_last_error("MERCADOLIVRE_SCRAPE_EXCEPTION", "Erro ao extrair dados do Mercado Livre", error=str(e))
             return {'error': str(e), 'url': url, 'error_code': 'MERCADOLIVRE_SCRAPE_EXCEPTION'}
     
-    def scrape_shopee(self, url):
-        """Extrai dados do Shopee com Selenium"""
-        try:
-            self.clear_last_error()
-            # Em produção, prefira requests com UA mobile para evitar tela de login
-            if IS_PRODUCTION and not SHOPEE_USE_SELENIUM_IN_PROD:
-                requests_data = self.scrape_shopee_requests(url)
-                if requests_data:
-                    return requests_data
-            # Primeiro tentar via requests
-            if not ALWAYS_USE_SELENIUM:
-                requests_data = self.scrape_shopee_requests(url)
-                if requests_data:
-                    return requests_data
-            if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
-                requests_data = self.scrape_shopee_requests(url)
-                if requests_data:
-                    return requests_data
-                return {'error': 'Shopee bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'SHOPEE_BLOCKED_OR_EMPTY'}
-
-            if not self.ensure_driver():
-                requests_data = self.scrape_shopee_requests(url)
-                if requests_data:
-                    return requests_data
-                if self.last_error:
-                    return {'url': url, **self.last_error}
-                return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
-
-            logger.info(f"Acessando Shopee: {url}")
-            if not self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10):
-                requests_data = self.scrape_shopee_requests(url)
-                if requests_data:
-                    requests_data.setdefault('original_url', url)
-                    return requests_data
-                if self.last_error:
-                    return {'url': url, **self.last_error}
-                return {'error': 'Falha ao abrir página no Selenium', 'url': url, 'error_code': 'SHOPEE_NAV_FAIL'}
-
-            try:
-                page_source = self.driver.page_source
-                if self.is_blocked_page(page_source):
-                    if self.retry_if_blocked(wait_seconds=2, ready_timeout=10):
-                        requests_data = self.scrape_shopee_requests(url)
-                        if requests_data:
-                            requests_data.setdefault('original_url', url)
-                            return requests_data
-                        if self.last_error:
-                            return {'url': url, **self.last_error}
-                        return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
-                    page_source = self.driver.page_source
-                if self.is_blocked_page(page_source):
-                    requests_data = self.scrape_shopee_requests(url)
-                    if requests_data:
-                        requests_data.setdefault('original_url', url)
-                        return requests_data
-                    if self.last_error:
-                        return {'url': url, **self.last_error}
-                    return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
-            except Exception:
-                pass
-            
-            data = {'url': url}
-            
-            # Título
-            title_selectors = [
-                'span[data-testid="pdp-product-title"]',
-                '.product-briefing__title',
-                'h1'
-            ]
-            title = self.extract_title_from_selectors(title_selectors, min_len=5)
-            if title:
-                data['title'] = title
-                logger.info(f"Título encontrado: {title}")
-            
-            # Preço
-            price_selectors = [
-                'span[data-testid="pdp-price"]',
-                'div.IZPeQz.B67UQ0',
-                'div.IZPeQz',
-                '.current-price',
-                '.product-briefing__price .current-price'
-            ]
-            formatted, price_val = self.extract_price_from_selectors(price_selectors)
-            if formatted:
-                data['price'] = formatted
-                data['price_value'] = price_val
-                logger.info(f"Preço encontrado: {formatted}")
-            
-            # Imagem
-            image_selectors = [
-                'img[data-testid="pdp-product-image"]',
-                '.product-briefing__image',
-                'img[src*="susercontent"]'
-            ]
-            img_src = self.extract_image_from_selectors(image_selectors)
-            if img_src:
-                data['image_url'] = img_src
-                logger.info(f"Imagem encontrada: {img_src}")
-
-            if self.has_any_data(data):
-                return data
-
-            # Fallback com requests quando Selenium não retorna dados
-            requests_data = self.scrape_shopee_requests(url)
-            if requests_data:
-                requests_data.setdefault('original_url', url)
-                return requests_data
-
-            if self.last_error:
-                return {'url': url, **self.last_error}
-            return {'error': 'Nenhum dado encontrado na Shopee', 'url': url, 'error_code': 'SHOPEE_NO_DATA'}
-            
-        except Exception as e:
-            logger.error(f"Erro ao extrair dados do Shopee: {e}")
-            self.set_last_error("SHOPEE_SCRAPE_EXCEPTION", "Erro ao extrair dados da Shopee", error=str(e))
-            return {'error': str(e), 'url': url, 'error_code': 'SHOPEE_SCRAPE_EXCEPTION'}
-    
     def scrape_product(self, url):
         """Função principal de scraping"""
         try:
@@ -1297,8 +1080,6 @@ window.chrome = window.chrome || { runtime: {} };
                 return self.scrape_amazon(url)
             elif site == 'mercadolivre':
                 return self.scrape_mercadolivre(url)
-            elif site == 'shopee':
-                return self.scrape_shopee(url)
             else:
                 return {'error': f'Site não suportado: {site}', 'url': url, 'error_code': 'SITE_UNSUPPORTED'}
                 
