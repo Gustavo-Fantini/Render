@@ -34,6 +34,7 @@ IS_PRODUCTION = os.environ.get('RENDER') == 'true'
 BASE_SCRAPE_DELAY_SECONDS = int(os.environ.get('SCRAPE_BASE_DELAY_SECONDS', '5'))
 APP_VERSION = os.environ.get('APP_VERSION', '0.0.0')
 ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
+ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -116,6 +117,7 @@ class FreeIslandScraper:
         options.add_argument('--disable-plugins')
         options.add_argument('--disable-infobars')
         options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--disable-features=IsolateOrigins,site-per-process')
         options.add_argument('--lang=pt-BR,pt')
         if user_agent:
             options.add_argument(f'--user-agent={user_agent}')
@@ -180,12 +182,55 @@ class FreeIslandScraper:
         if not self.driver:
             return
         try:
+            self.driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {"timezoneId": "America/Sao_Paulo"})
+            self.driver.execute_cdp_cmd(
+                "Network.setUserAgentOverride",
+                {
+                    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "acceptLanguage": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "platform": "Linux x86_64"
+                }
+            )
             self.driver.execute_cdp_cmd(
                 "Page.addScriptToEvaluateOnNewDocument",
-                {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"}
+                {"source": """
+Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+Object.defineProperty(navigator, 'languages', {get: () => ['pt-BR','pt','en-US','en']});
+Object.defineProperty(navigator, 'platform', {get: () => 'Linux x86_64'});
+Object.defineProperty(navigator, 'vendor', {get: () => 'Google Inc.'});
+window.chrome = window.chrome || { runtime: {} };
+"""}
             )
         except Exception as e:
             logger.debug(f"Falha ao aplicar hardening do driver: {e}")
+
+    def is_blocked_page(self, page_source):
+        if not page_source:
+            return False
+        lower = page_source.lower()
+        return any(token in lower for token in (
+            'captcha',
+            'robot check',
+            'validatecaptcha',
+            'unusual traffic',
+            'access denied',
+            'temporarily unavailable',
+        ))
+
+    def navigate_with_wait(self, url, wait_seconds=2, ready_timeout=10):
+        self.driver.set_page_load_timeout(20)
+        try:
+            self.driver.get(url)
+        except TimeoutException:
+            logger.warning("Timeout no carregamento (Selenium), continuando...")
+        time.sleep(wait_seconds)
+        self.wait_ready(timeout=ready_timeout)
+        try:
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight * 0.5);")
+            time.sleep(0.7)
+            self.driver.execute_script("window.scrollTo(0, 0);")
+        except Exception:
+            pass
     
     def identify_site(self, url):
         """Identifica o site pela URL"""
@@ -700,9 +745,10 @@ class FreeIslandScraper:
         """Extrai dados da Amazon com Selenium"""
         try:
             # Primeiro tentar via requests (mais rápido e evita timeout do renderer)
-            requests_data = self.scrape_amazon_requests(url)
-            if requests_data:
-                return requests_data
+            if not ALWAYS_USE_SELENIUM:
+                requests_data = self.scrape_amazon_requests(url)
+                if requests_data:
+                    return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 # Em produção, evitar Selenium se explicitamente desabilitado
                 return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'AMAZON_BLOCKED_OR_EMPTY'}
@@ -711,18 +757,12 @@ class FreeIslandScraper:
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Amazon: {url}")
-            self.driver.set_page_load_timeout(15)
-            try:
-                self.driver.get(url)
-            except TimeoutException:
-                logger.warning("Timeout no carregamento da Amazon (Selenium), continuando...")
-            time.sleep(2)
-            self.wait_ready(timeout=8)
+            self.navigate_with_wait(url, wait_seconds=2, ready_timeout=8)
 
             # Detectar possível captcha/bloqueio
             try:
-                page_source = self.driver.page_source.lower()
-                if 'captcha' in page_source or 'validatecaptcha' in page_source or 'type the characters you see' in page_source:
+                page_source = self.driver.page_source
+                if self.is_blocked_page(page_source) or 'type the characters you see' in page_source.lower():
                     return {'error': 'Amazon apresentou captcha/bloqueio', 'url': url, 'error_code': 'AMAZON_CAPTCHA'}
             except Exception:
                 pass
@@ -773,9 +813,10 @@ class FreeIslandScraper:
         """Extrai dados do Mercado Livre com Selenium"""
         try:
             # Primeiro tentar via requests
-            requests_data = self.scrape_mercadolivre_requests(url)
-            if requests_data:
-                return requests_data
+            if not ALWAYS_USE_SELENIUM:
+                requests_data = self.scrape_mercadolivre_requests(url)
+                if requests_data:
+                    return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 return {'error': 'Mercado Livre bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'MERCADOLIVRE_BLOCKED_OR_EMPTY'}
 
@@ -783,17 +824,11 @@ class FreeIslandScraper:
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Mercado Livre: {url}")
-            self.driver.set_page_load_timeout(20)
-            try:
-                self.driver.get(url)
-            except TimeoutException:
-                logger.warning("Timeout no carregamento do Mercado Livre (Selenium), continuando...")
-            time.sleep(2)
-            self.wait_ready(timeout=8)
+            self.navigate_with_wait(url, wait_seconds=2, ready_timeout=8)
 
             try:
-                page_source = self.driver.page_source.lower()
-                if 'captcha' in page_source or 'robot' in page_source:
+                page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
                     return {'error': 'Mercado Livre apresentou captcha/bloqueio', 'url': url, 'error_code': 'MERCADOLIVRE_CAPTCHA'}
             except Exception:
                 pass
@@ -883,17 +918,11 @@ class FreeIslandScraper:
             # Configurar driver para Magazine Luiza
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
-            self.driver.set_page_load_timeout(20)
-            try:
-                self.driver.get(url)
-            except TimeoutException:
-                logger.warning("Timeout no carregamento do Magazine Luiza (Selenium), continuando...")
-            time.sleep(3)
-            self.wait_ready(timeout=10)
+            self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10)
 
             try:
-                page_source = self.driver.page_source.lower()
-                if 'captcha' in page_source or 'robot' in page_source:
+                page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
                     return {'error': 'Magazine Luiza apresentou captcha/bloqueio', 'url': url, 'error_code': 'MAGALU_CAPTCHA'}
             except Exception:
                 pass
@@ -924,12 +953,7 @@ class FreeIslandScraper:
                             href = link.get_attribute('href')
                             if href and ('/p/' in href and ('magazineluiza' in href or 'magalu' in href)):
                                 logger.info(f"Link do produto encontrado: {href}")
-                                  try:
-                                      self.driver.get(href)
-                                  except TimeoutException:
-                                      logger.warning("Timeout no carregamento do produto Magalu, continuando...")
-                                  time.sleep(3)
-                                  self.wait_ready(timeout=8)
+                                  self.navigate_with_wait(href, wait_seconds=3, ready_timeout=8)
                                   break
                         except:
                             continue
@@ -1121,9 +1145,10 @@ class FreeIslandScraper:
         """Extrai dados do Shopee com Selenium"""
         try:
             # Primeiro tentar via requests
-            requests_data = self.scrape_shopee_requests(url)
-            if requests_data:
-                return requests_data
+            if not ALWAYS_USE_SELENIUM:
+                requests_data = self.scrape_shopee_requests(url)
+                if requests_data:
+                    return requests_data
             if IS_PRODUCTION and not ALLOW_SELENIUM_IN_PROD:
                 return {'error': 'Shopee bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'SHOPEE_BLOCKED_OR_EMPTY'}
 
@@ -1131,17 +1156,11 @@ class FreeIslandScraper:
                 return {'error': 'WebDriver não inicializado', 'url': url, 'error_code': 'WEBDRIVER_UNAVAILABLE'}
 
             logger.info(f"Acessando Shopee: {url}")
-            self.driver.set_page_load_timeout(20)
-            try:
-                self.driver.get(url)
-            except TimeoutException:
-                logger.warning("Timeout no carregamento da Shopee (Selenium), continuando...")
-            time.sleep(3)
-            self.wait_ready(timeout=10)
+            self.navigate_with_wait(url, wait_seconds=3, ready_timeout=10)
 
             try:
-                page_source = self.driver.page_source.lower()
-                if 'captcha' in page_source or 'robot' in page_source:
+                page_source = self.driver.page_source
+                if self.is_blocked_page(page_source):
                     return {'error': 'Shopee apresentou captcha/bloqueio', 'url': url, 'error_code': 'SHOPEE_CAPTCHA'}
             except Exception:
                 pass
