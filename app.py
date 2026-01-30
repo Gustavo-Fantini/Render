@@ -865,17 +865,61 @@ window.chrome = window.chrome || { runtime: {} };
                     if href_local:
                         data_local['resolved_url'] = href_local
 
-                img_el_local = card_local.select_one('img.poly-component__picture') or card_local.select_one('img')
-                if img_el_local:
-                    img_src_local = img_el_local.get('src') or img_el_local.get('data-src')
-                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
-                        img_src_local = img_el_local.get('data-srcset').split(',')[0].split(' ')[0].strip()
-                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-lazy-src'):
-                        img_src_local = img_el_local.get('data-lazy-src').strip()
-                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
-                        img_src_local = img_el_local.get('data-srcset').split(',')[-1].split(' ')[0].strip()
-                    if img_src_local and 'http' in img_src_local:
-                        data_local['image_url'] = img_src_local
+                def normalize_image_src(raw_src):
+                    if not raw_src:
+                        return None
+                    raw_src = raw_src.strip()
+                    if ',' in raw_src:
+                        parts = [p.strip().split(' ')[0] for p in raw_src.split(',') if p.strip()]
+                        for candidate in reversed(parts):
+                            candidate = candidate.strip()
+                            if candidate.startswith('//'):
+                                candidate = f"https:{candidate}"
+                            if candidate.startswith('http'):
+                                return candidate
+                        if parts and not parts[-1].startswith('data:'):
+                            return parts[-1]
+                        return None
+                    if raw_src.startswith('//'):
+                        raw_src = f"https:{raw_src}"
+                    if raw_src.startswith('http'):
+                        return raw_src
+                    return None
+
+                img_src_local = None
+                img_attrs = (
+                    'src',
+                    'data-src',
+                    'data-lazy-src',
+                    'data-srcset',
+                    'data-lazy-srcset',
+                    'srcset',
+                    'data-original',
+                    'data-image',
+                    'data-img',
+                    'data-zoom',
+                    'data-zoom-image',
+                )
+                for img_el_local in card_local.select('img'):
+                    for attr in img_attrs:
+                        img_src_local = normalize_image_src(img_el_local.get(attr))
+                        if img_src_local:
+                            break
+                    if img_src_local:
+                        break
+
+                if not img_src_local:
+                    card_html = str(card_local)
+                    match = re.search(r'https?://[^"\\s>]*mlstatic\\.com[^"\\s>]*', card_html)
+                    if not match:
+                        match = re.search(r'//[^"\\s>]*mlstatic\\.com[^"\\s>]*', card_html)
+                        if match:
+                            img_src_local = f"https:{match.group(0)}"
+                    else:
+                        img_src_local = match.group(0)
+
+                if img_src_local:
+                    data_local['image_url'] = img_src_local
 
                 price_container_local = card_local.select_one('.poly-price__current .andes-money-amount')
                 if price_container_local:
