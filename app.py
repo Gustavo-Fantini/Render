@@ -826,6 +826,46 @@ window.chrome = window.chrome || { runtime: {} };
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot' in lower_html:
+                # Se for página social com cards, tenta extrair primeiro item
+                if 'poly-card' in html and 'poly-component__title' in html:
+                    soup = BeautifulSoup(html, 'html.parser')
+                    card = soup.select_one('.poly-card')
+                    if card:
+                        data = {'url': url, 'resolved_url': response.url or url}
+                        title_el = card.select_one('.poly-component__title')
+                        if title_el:
+                            data['title'] = title_el.get_text(strip=True)
+                            href = title_el.get('href')
+                            if href:
+                                data['resolved_url'] = href
+
+                        img_el = card.select_one('img.poly-component__picture') or card.select_one('img')
+                        if img_el:
+                            img_src = img_el.get('src') or img_el.get('data-src')
+                            if img_src and 'http' in img_src:
+                                data['image_url'] = img_src
+
+                        price_container = card.select_one('.poly-price__current .andes-money-amount')
+                        if price_container:
+                            symbol = price_container.select_one('.andes-money-amount__currency-symbol')
+                            fraction = price_container.select_one('.andes-money-amount__fraction')
+                            cents = price_container.select_one('.andes-money-amount__cents')
+                            symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
+                            fraction_text = fraction.get_text(strip=True) if fraction else ''
+                            cents_text = cents.get_text(strip=True) if cents else ''
+                            if fraction_text:
+                                price_text = f"{symbol_text} {fraction_text}"
+                                if cents_text:
+                                    price_text += f",{cents_text}"
+                                formatted, price_val = self.clean_price(price_text)
+                                if formatted:
+                                    data['price'] = formatted
+                                    data['price_value'] = price_val
+
+                        if any(data.get(k) for k in ('title', 'price', 'image_url')):
+                            log_event(logging.INFO, "mercadolivre_requests_social_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
+                            return data
+
                 log_event(logging.WARNING, "mercadolivre_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 self.set_last_error("MERCADOLIVRE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
                 return None
