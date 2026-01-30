@@ -865,17 +865,17 @@ window.chrome = window.chrome || { runtime: {} };
                     if href_local:
                         data_local['resolved_url'] = href_local
 
-            img_el_local = card_local.select_one('img.poly-component__picture') or card_local.select_one('img')
-            if img_el_local:
-                img_src_local = img_el_local.get('src') or img_el_local.get('data-src')
-                if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
-                    img_src_local = img_el_local.get('data-srcset').split(',')[0].split(' ')[0].strip()
-                if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-lazy-src'):
-                    img_src_local = img_el_local.get('data-lazy-src').strip()
-                if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
-                    img_src_local = img_el_local.get('data-srcset').split(',')[-1].split(' ')[0].strip()
-                if img_src_local and 'http' in img_src_local:
-                    data_local['image_url'] = img_src_local
+                img_el_local = card_local.select_one('img.poly-component__picture') or card_local.select_one('img')
+                if img_el_local:
+                    img_src_local = img_el_local.get('src') or img_el_local.get('data-src')
+                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
+                        img_src_local = img_el_local.get('data-srcset').split(',')[0].split(' ')[0].strip()
+                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-lazy-src'):
+                        img_src_local = img_el_local.get('data-lazy-src').strip()
+                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
+                        img_src_local = img_el_local.get('data-srcset').split(',')[-1].split(' ')[0].strip()
+                    if img_src_local and 'http' in img_src_local:
+                        data_local['image_url'] = img_src_local
 
                 price_container_local = card_local.select_one('.poly-price__current .andes-money-amount')
                 if price_container_local:
