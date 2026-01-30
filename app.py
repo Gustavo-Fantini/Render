@@ -318,7 +318,7 @@ window.chrome = window.chrome || { runtime: {} };
         logger.warning(f"Site não reconhecido para URL: {url} - Domínio: {domain}")
         return 'unknown'
     
-    def clean_price(self, text):
+    def clean_price(self, text, apply_amazon_fixes=True):
         """Limpa e formata preço"""
         if not text:
             return None, None
@@ -373,8 +373,7 @@ window.chrome = window.chrome || { runtime: {} };
             price_float = float(clean)
 
             # Correção específica para Amazon: mover vírgula duas casas para a esquerda
-            # Detectar padrão Amazon: número que precisa da vírgula movida
-            if price_float >= 1000:
+            if apply_amazon_fixes and price_float >= 1000:
                 # Verificar se é padrão Amazon (baseado no original)
                 if '\n' in original or '\r' in original:
                     # Preço Amazon com quebra de linha: mover vírgula 2 casas
@@ -808,7 +807,8 @@ window.chrome = window.chrome || { runtime: {} };
         }
         try:
             start = time.time()
-            response = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+            resolved_url = self.resolve_mercadolivre_url(url)
+            response = requests.get(resolved_url, headers=headers, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -842,8 +842,10 @@ window.chrome = window.chrome || { runtime: {} };
                         img_el = card.select_one('img.poly-component__picture') or card.select_one('img')
                         if img_el:
                             img_src = img_el.get('src') or img_el.get('data-src')
-                            if img_src and 'http' in img_src:
-                                data['image_url'] = img_src
+                    if (not img_src or not img_src.startswith('http')) and img_el.get('data-srcset'):
+                        img_src = img_el.get('data-srcset').split(',')[0].split(' ')[0].strip()
+                    if img_src and 'http' in img_src:
+                        data['image_url'] = img_src
 
                         price_container = card.select_one('.poly-price__current .andes-money-amount')
                         if price_container:
@@ -857,7 +859,7 @@ window.chrome = window.chrome || { runtime: {} };
                                 price_text = f"{symbol_text} {fraction_text}"
                                 if cents_text:
                                     price_text += f",{cents_text}"
-                                formatted, price_val = self.clean_price(price_text)
+                                formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=False)
                                 if formatted:
                                     data['price'] = formatted
                                     data['price_value'] = price_val
@@ -880,7 +882,7 @@ window.chrome = window.chrome || { runtime: {} };
             )
 
             soup = BeautifulSoup(html, 'html.parser')
-            data = {'url': url, 'resolved_url': response.url or url}
+            data = {'url': url, 'resolved_url': response.url or resolved_url or url}
 
             title_el = soup.select_one('h1.ui-pdp-title') or soup.select_one('.ui-pdp-title') or soup.select_one('h1')
             if title_el:
@@ -907,7 +909,7 @@ window.chrome = window.chrome || { runtime: {} };
                             price_text += f",{cents_text}"
 
             if price_text:
-                formatted, price_val = self.clean_price(price_text)
+                formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=False)
                 if formatted:
                     data['price'] = formatted
                     data['price_value'] = price_val
@@ -920,6 +922,8 @@ window.chrome = window.chrome || { runtime: {} };
                 img_el = soup.select_one('img.ui-pdp-image') or soup.select_one('img[src*="http2.mlstatic.com"]')
                 if img_el:
                     img_src = img_el.get('src') or img_el.get('data-src')
+                    if (not img_src or not img_src.startswith('http')) and img_el.get('data-srcset'):
+                        img_src = img_el.get('data-srcset').split(',')[0].split(' ')[0].strip()
             if img_src and 'http' in img_src:
                 data['image_url'] = img_src
 
