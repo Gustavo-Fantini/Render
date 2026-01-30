@@ -470,7 +470,7 @@ window.chrome = window.chrome || { runtime: {} };
                 continue
         return None
 
-    def extract_price_from_selectors(self, selectors):
+    def extract_price_from_selectors(self, selectors, apply_amazon_fixes=True):
         for selector in selectors:
             try:
                 elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
@@ -478,7 +478,7 @@ window.chrome = window.chrome || { runtime: {} };
                     price_text = element.text.strip()
                     if price_text and any(c.isdigit() for c in price_text):
                         price_text = self.normalize_price_text(price_text)
-                        formatted, price_val = self.clean_price(price_text)
+                        formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=apply_amazon_fixes)
                         if formatted and price_val:
                             return formatted, price_val
             except Exception:
@@ -847,6 +847,53 @@ window.chrome = window.chrome || { runtime: {} };
 
             html = response.text
             lower_html = html.lower()
+            social_html = html
+            social_url = response.url
+
+            def extract_social_card(html_text, page_url):
+                if not html_text or 'poly-card' not in html_text:
+                    return None
+                soup_local = BeautifulSoup(html_text, 'html.parser')
+                card_local = soup_local.select_one('.poly-card')
+                if not card_local:
+                    return None
+                data_local = {'url': url, 'resolved_url': page_url or url}
+                title_el_local = card_local.select_one('.poly-component__title')
+                if title_el_local:
+                    data_local['title'] = title_el_local.get_text(strip=True)
+                    href_local = title_el_local.get('href')
+                    if href_local:
+                        data_local['resolved_url'] = href_local
+
+                img_el_local = card_local.select_one('img.poly-component__picture') or card_local.select_one('img')
+                if img_el_local:
+                    img_src_local = img_el_local.get('src') or img_el_local.get('data-src')
+                    if (not img_src_local or not img_src_local.startswith('http')) and img_el_local.get('data-srcset'):
+                        img_src_local = img_el_local.get('data-srcset').split(',')[0].split(' ')[0].strip()
+                    if img_src_local and 'http' in img_src_local:
+                        data_local['image_url'] = img_src_local
+
+                price_container_local = card_local.select_one('.poly-price__current .andes-money-amount')
+                if price_container_local:
+                    symbol = price_container_local.select_one('.andes-money-amount__currency-symbol')
+                    fraction = price_container_local.select_one('.andes-money-amount__fraction')
+                    cents = price_container_local.select_one('.andes-money-amount__cents')
+                    symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
+                    fraction_text = fraction.get_text(strip=True) if fraction else ''
+                    cents_text = cents.get_text(strip=True) if cents else ''
+                    if fraction_text:
+                        price_text = f"{symbol_text} {fraction_text}"
+                        if cents_text:
+                            price_text += f",{cents_text}"
+                        formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=False)
+                        if formatted:
+                            data_local['price'] = formatted
+                            data_local['price_value'] = price_val
+                if any(data_local.get(k) for k in ('title', 'price', 'image_url')):
+                    return data_local
+                return None
+
+            social_data = extract_social_card(social_html, social_url)
 
             # Se for página social com cards, tentar seguir para o produto
             if 'poly-card' in html and 'poly-component__title' in html:
@@ -862,51 +909,18 @@ window.chrome = window.chrome || { runtime: {} };
                                 html = product_response.text
                                 lower_html = html.lower()
                                 response = product_response
+                                # se caiu em captcha/robot, volta para o social
+                                if 'captcha' in lower_html or 'robot' in lower_html:
+                                    if social_data:
+                                        log_event(logging.INFO, "mercadolivre_requests_social_success", has_title=bool(social_data.get("title")), has_price=bool(social_data.get("price")), has_image=bool(social_data.get("image_url")))
+                                        return social_data
                         except Exception:
                             pass
 
             if 'captcha' in lower_html or 'robot' in lower_html:
-                # Ainda tentar extrair card se estiver disponível
-                if 'poly-card' in html and 'poly-component__title' in html:
-                    soup = BeautifulSoup(html, 'html.parser')
-                    card = soup.select_one('.poly-card')
-                    if card:
-                        data = {'url': url, 'resolved_url': response.url or resolved_url or url}
-                        title_el = card.select_one('.poly-component__title')
-                        if title_el:
-                            data['title'] = title_el.get_text(strip=True)
-                            href = title_el.get('href')
-                            if href:
-                                data['resolved_url'] = href
-
-                        img_el = card.select_one('img.poly-component__picture') or card.select_one('img')
-                        if img_el:
-                            img_src = img_el.get('src') or img_el.get('data-src')
-                            if (not img_src or not img_src.startswith('http')) and img_el.get('data-srcset'):
-                                img_src = img_el.get('data-srcset').split(',')[0].split(' ')[0].strip()
-                            if img_src and 'http' in img_src:
-                                data['image_url'] = img_src
-
-                        price_container = card.select_one('.poly-price__current .andes-money-amount')
-                        if price_container:
-                            symbol = price_container.select_one('.andes-money-amount__currency-symbol')
-                            fraction = price_container.select_one('.andes-money-amount__fraction')
-                            cents = price_container.select_one('.andes-money-amount__cents')
-                            symbol_text = symbol.get_text(strip=True) if symbol else 'R$'
-                            fraction_text = fraction.get_text(strip=True) if fraction else ''
-                            cents_text = cents.get_text(strip=True) if cents else ''
-                            if fraction_text:
-                                price_text = f"{symbol_text} {fraction_text}"
-                                if cents_text:
-                                    price_text += f",{cents_text}"
-                                formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=False)
-                                if formatted:
-                                    data['price'] = formatted
-                                    data['price_value'] = price_val
-
-                        if any(data.get(k) for k in ('title', 'price', 'image_url')):
-                            log_event(logging.INFO, "mercadolivre_requests_social_success", has_title=bool(data.get("title")), has_price=bool(data.get("price")), has_image=bool(data.get("image_url")))
-                            return data
+                if social_data:
+                    log_event(logging.INFO, "mercadolivre_requests_social_success", has_title=bool(social_data.get("title")), has_price=bool(social_data.get("price")), has_image=bool(social_data.get("image_url")))
+                    return social_data
 
                 log_event(logging.WARNING, "mercadolivre_requests_blocked", reason="captcha_or_robot", final_url=response.url)
                 self.set_last_error("MERCADOLIVRE_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
