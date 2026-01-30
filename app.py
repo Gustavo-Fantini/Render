@@ -727,11 +727,23 @@ window.chrome = window.chrome || { runtime: {} };
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Connection": "close"
+            "Connection": "close",
+            "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://www.mercadolivre.com.br/",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-User": "?1",
+            "Sec-Fetch-Dest": "document"
         }
         resolved = url
+        session = requests.Session()
+        session.headers.update(headers)
         try:
-            response = requests.head(url, headers=headers, timeout=8, allow_redirects=True)
+            session.get("https://www.mercadolivre.com.br/", timeout=8)
+        except Exception:
+            pass
+        try:
+            response = session.head(url, timeout=8, allow_redirects=True)
             if response.url:
                 resolved = response.url
         except Exception:
@@ -741,7 +753,7 @@ window.chrome = window.chrome || { runtime: {} };
         try:
             parsed = urlparse(resolved)
             if '/social/' in parsed.path or 'forceInApp' in parsed.query or 'matt_' in parsed.query:
-                response = requests.get(resolved, headers=headers, timeout=10, allow_redirects=True)
+                response = session.get(resolved, timeout=10, allow_redirects=True)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 canonical = soup.select_one('link[rel="canonical"]')
                 og_url = soup.select_one('meta[property="og:url"]')
@@ -762,14 +774,24 @@ window.chrome = window.chrome || { runtime: {} };
                         if match:
                             candidate = match.group(0)
                             break
+                if not candidate:
+                    # Tentar pegar href do primeiro card
+                    first = soup.select_one('.poly-card .poly-component__title')
+                    if first and first.get('href'):
+                        candidate = first.get('href')
                 if candidate:
-                    return candidate
+                    try:
+                        prod = session.get(candidate, timeout=10, allow_redirects=True)
+                        if prod.url:
+                            return prod.url
+                    except Exception:
+                        return candidate
 
                 # Remover parâmetros de tracking
                 q = parse_qs(parsed.query)
                 for k in ['forceInApp', 'ref', 'matt_word', 'matt_tool', 'origin']:
                     q.pop(k, None)
-                cleaned = parsed._replace(query=urlencode(q, doseq=True))
+                cleaned = parsed._replace(query=urlencode(q, doseq=True), fragment="")
                 return urlunparse(cleaned)
         except Exception:
             pass
