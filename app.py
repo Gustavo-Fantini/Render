@@ -869,10 +869,14 @@ window.chrome = window.chrome || { runtime: {} };
                     if not raw_src:
                         return None
                     raw_src = raw_src.strip()
+                    if raw_src.startswith('data:'):
+                        return None
                     if ',' in raw_src:
                         parts = [p.strip().split(' ')[0] for p in raw_src.split(',') if p.strip()]
                         for candidate in reversed(parts):
                             candidate = candidate.strip()
+                            if candidate.startswith('data:'):
+                                continue
                             if candidate.startswith('//'):
                                 candidate = f"https:{candidate}"
                             if candidate.startswith('http'):
