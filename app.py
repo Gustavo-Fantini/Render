@@ -825,13 +825,31 @@ window.chrome = window.chrome || { runtime: {} };
 
             html = response.text
             lower_html = html.lower()
+
+            # Se for página social com cards, tentar seguir para o produto
+            if 'poly-card' in html and 'poly-component__title' in html:
+                soup = BeautifulSoup(html, 'html.parser')
+                card = soup.select_one('.poly-card')
+                if card:
+                    title_el = card.select_one('.poly-component__title')
+                    candidate_url = title_el.get('href') if title_el else None
+                    if candidate_url and candidate_url != response.url:
+                        try:
+                            product_response = requests.get(candidate_url, headers=headers, timeout=12, allow_redirects=True)
+                            if product_response.status_code == 200:
+                                html = product_response.text
+                                lower_html = html.lower()
+                                response = product_response
+                        except Exception:
+                            pass
+
             if 'captcha' in lower_html or 'robot' in lower_html:
-                # Se for página social com cards, tenta extrair primeiro item
+                # Ainda tentar extrair card se estiver disponível
                 if 'poly-card' in html and 'poly-component__title' in html:
                     soup = BeautifulSoup(html, 'html.parser')
                     card = soup.select_one('.poly-card')
                     if card:
-                        data = {'url': url, 'resolved_url': response.url or url}
+                        data = {'url': url, 'resolved_url': response.url or resolved_url or url}
                         title_el = card.select_one('.poly-component__title')
                         if title_el:
                             data['title'] = title_el.get_text(strip=True)
@@ -842,10 +860,10 @@ window.chrome = window.chrome || { runtime: {} };
                         img_el = card.select_one('img.poly-component__picture') or card.select_one('img')
                         if img_el:
                             img_src = img_el.get('src') or img_el.get('data-src')
-                    if (not img_src or not img_src.startswith('http')) and img_el.get('data-srcset'):
-                        img_src = img_el.get('data-srcset').split(',')[0].split(' ')[0].strip()
-                    if img_src and 'http' in img_src:
-                        data['image_url'] = img_src
+                            if (not img_src or not img_src.startswith('http')) and img_el.get('data-srcset'):
+                                img_src = img_el.get('data-srcset').split(',')[0].split(' ')[0].strip()
+                            if img_src and 'http' in img_src:
+                                data['image_url'] = img_src
 
                         price_container = card.select_one('.poly-price__current .andes-money-amount')
                         if price_container:
