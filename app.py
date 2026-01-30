@@ -103,7 +103,7 @@ def error_response(code, message, http_status=500, details=None, request_id=None
 
 def log_event(level, message, **fields):
     # Log estruturado simples para facilitar diagnóstico no Render
-    entry = {"message": message}
+    entry = {"message": message, "app_version": APP_VERSION}
     if fields:
         entry["fields"] = fields
     logger.log(level, json.dumps(entry, ensure_ascii=False))
@@ -1451,6 +1451,7 @@ def scrape():
         
         if not url:
             payload, status = error_response("URL_MISSING", "URL não fornecida", 400, request_id=request_id)
+            log_event(logging.WARNING, "scrape_failed", request_id=request_id, url="", error_code="URL_MISSING")
             return jsonify(payload), status
         
         # Fazer scraping
@@ -1463,7 +1464,14 @@ def scrape():
                 "error_code": product_data.get("error_code")
             }
             payload, status = error_response("SCRAPE_FAILED", product_data['error'], 502, details=details, request_id=request_id)
-            log_event(logging.ERROR, "scrape_failed", request_id=request_id, url=url, details=details)
+            log_event(
+                logging.ERROR,
+                "scrape_failed",
+                request_id=request_id,
+                url=url,
+                error_code=product_data.get("error_code"),
+                details=details
+            )
             return jsonify(payload), status
         
         # Gerar mensagem
@@ -1500,8 +1508,8 @@ def scrape():
         })
         
     except Exception as e:
-        log_event(logging.ERROR, "scrape_exception", error=str(e))
-        payload, status = error_response("SCRAPE_EXCEPTION", str(e), 500)
+        log_event(logging.ERROR, "scrape_exception", error=str(e), error_code="SCRAPE_EXCEPTION")
+        payload, status = error_response("SCRAPE_EXCEPTION", str(e), 500, request_id=locals().get("request_id"))
         return jsonify(payload), status
 
 @app.route('/save', methods=['POST'])
