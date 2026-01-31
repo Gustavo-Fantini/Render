@@ -157,6 +157,10 @@
             height: 18px;
             accent-color: var(--accent);
         }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+        }
 
         .coupon-section {
             background: rgba(255, 255, 255, 0.03);
@@ -360,6 +364,86 @@
 
             .form-row {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 16px 18px;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .container {
+                padding: 20px 16px 32px;
+            }
+
+            .panel {
+                padding: 18px;
+            }
+
+            .panel-title {
+                font-size: 1rem;
+            }
+
+            input[type="url"], input[type="text"], input[type="number"], textarea {
+                padding: 12px 14px;
+            }
+
+            textarea {
+                min-height: 140px;
+            }
+
+            .product-preview {
+                grid-template-columns: 1fr;
+                text-align: left;
+            }
+
+            .product-image {
+                width: 100%;
+                height: 180px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .actions .btn {
+                width: 100%;
+            }
+
+            .btn-logout {
+                width: 100%;
+                text-align: center;
+            }
+
+            .table {
+                font-size: 0.88rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 1.15rem;
+            }
+
+            .checkbox-group {
+                align-items: flex-start;
+            }
+
+            .product-image {
+                height: 150px;
+            }
+
+            .footer {
+                font-size: 0.85rem;
+                padding: 12px;
             }
         }
     </style>
