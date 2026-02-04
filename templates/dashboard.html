@@ -36,6 +36,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            -webkit-text-size-adjust: 100%;
         }
 
         .header {
@@ -131,6 +132,7 @@
             padding: 14px 16px;
             transition: border 0.2s ease, box-shadow 0.2s ease;
             font-family: inherit;
+            font-size: 1rem;
         }
 
         input:focus, textarea:focus {
@@ -307,6 +309,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.92rem;
+            min-width: 520px;
         }
 
         .table th,
@@ -394,6 +397,7 @@
 
             input[type="url"], input[type="text"], input[type="number"], textarea {
                 padding: 12px 14px;
+                font-size: 16px;
             }
 
             textarea {
@@ -424,7 +428,8 @@
             }
 
             .table {
-                font-size: 0.88rem;
+                font-size: 0.9rem;
+                min-width: 520px;
             }
         }
 
