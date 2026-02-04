@@ -37,6 +37,7 @@
             display: flex;
             flex-direction: column;
             -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
         }
 
         .header {
@@ -309,7 +310,6 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.92rem;
-            min-width: 520px;
         }
 
         .table th,
@@ -429,8 +429,52 @@
 
             .table {
                 font-size: 0.9rem;
-                min-width: 520px;
             }
+
+            .table thead {
+                display: none;
+            }
+
+            .table,
+            .table tbody,
+            .table tr,
+            .table td {
+                display: block;
+                width: 100%;
+            }
+
+            .table tr {
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 12px;
+                margin-bottom: 14px;
+                background: rgba(255, 255, 255, 0.02);
+            }
+
+            .table td {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                border-bottom: 1px dashed var(--border);
+                padding: 10px 0;
+            }
+
+            .table td:last-child {
+                border-bottom: none;
+            }
+
+            .table td::before {
+                content: attr(data-label);
+                color: var(--muted);
+                font-weight: 600;
+            }
+
+            .table td img {
+                width: 56px;
+                height: 56px;
+            }
+        }
         }
 
         @media (max-width: 480px) {
@@ -745,10 +789,10 @@
                         const statusText = row.enviado ? 'Enviado' : 'Pendente';
                         return `
                             <tr>
-                                <td>${img}</td>
-                                <td>${msg || '-'}</td>
-                                <td><span class="status-pill ${statusClass}">${statusText}</span></td>
-                                <td>${formatDate(row.criado_em)}</td>
+                                <td data-label="Imagem">${img || '-'}</td>
+                                <td data-label="Mensagem">${msg || '-'}</td>
+                                <td data-label="Enviado"><span class="status-pill ${statusClass}">${statusText}</span></td>
+                                <td data-label="Criado">${formatDate(row.criado_em)}</td>
                             </tr>
                         `;
                     }).join('');
