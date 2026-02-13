@@ -88,7 +88,7 @@ LOGIN_EMAIL = get_env('LOGIN_EMAIL', default='', required=IS_PRODUCTION)
 LOGIN_SENHA = get_env('LOGIN_PASSWORD', default='', required=IS_PRODUCTION)
 
 # Linktree
-LINKTREE_URL = "https://linktr.ee/freeisland"
+LINKTREE_URL = "https://linktr.ee/Free_Island"
 
 # Código de erro padronizado para resposta e logs
 def error_response(code, message, http_status=500, details=None, request_id=None):
