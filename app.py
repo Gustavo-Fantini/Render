@@ -573,8 +573,9 @@ window.chrome = window.chrome || { runtime: {} };
         }
         try:
             start = time.time()
-            resolved_url = self.resolve_mercadolivre_url(url)
-            response = requests.get(resolved_url, headers=headers, timeout=12, allow_redirects=True)
+            resolved_url = self.resolve_amazon_url(url)
+            request_url = self.canonicalize_amazon_url(resolved_url)
+            response = requests.get(request_url, headers=headers, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -582,6 +583,7 @@ window.chrome = window.chrome || { runtime: {} };
                 status=response.status_code,
                 elapsed_ms=elapsed_ms,
                 final_url=response.url,
+                request_url=request_url,
                 content_length=len(response.text or "")
             )
             if response.status_code != 200:
@@ -592,9 +594,28 @@ window.chrome = window.chrome || { runtime: {} };
             html = response.text
             lower_html = html.lower()
             if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
-                log_event(logging.WARNING, "amazon_requests_blocked", reason="captcha_or_robot_check", final_url=response.url)
-                self.set_last_error("AMAZON_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
-                return None
+                # Retry único em URL canônica sem parâmetros de tracking
+                canonical_retry = self.canonicalize_amazon_url(response.url or request_url)
+                if canonical_retry != request_url:
+                    retry_response = requests.get(canonical_retry, headers=headers, timeout=12, allow_redirects=True)
+                    retry_html = retry_response.text or ""
+                    retry_lower = retry_html.lower()
+                    log_event(
+                        logging.INFO,
+                        "amazon_requests_retry_response",
+                        status=retry_response.status_code,
+                        final_url=retry_response.url,
+                        request_url=canonical_retry,
+                        content_length=len(retry_html)
+                    )
+                    if retry_response.status_code == 200 and not ('captcha' in retry_lower or 'robot check' in retry_lower or 'validatecaptcha' in retry_lower):
+                        response = retry_response
+                        html = retry_html
+                        lower_html = retry_lower
+                if 'captcha' in lower_html or 'robot check' in lower_html or 'validatecaptcha' in lower_html:
+                    log_event(logging.WARNING, "amazon_requests_blocked", reason="captcha_or_robot_check", final_url=response.url)
+                    self.set_last_error("AMAZON_REQUESTS_BLOCKED", "Bloqueio/captcha detectado (requests)", final_url=response.url)
+                    return None
             log_event(
                 logging.INFO,
                 "amazon_requests_html_markers",
@@ -723,6 +744,28 @@ window.chrome = window.chrome || { runtime: {} };
         except Exception:
             pass
         return url
+
+    def canonicalize_amazon_url(self, url):
+        """Normaliza URL Amazon para reduzir tracking e variacao de pagina."""
+        try:
+            parsed = urlparse(url)
+            host = parsed.netloc.lower()
+            if 'amazon.' not in host:
+                return url
+
+            asin_match = re.search(r'/dp/([A-Z0-9]{10})', parsed.path, re.IGNORECASE)
+            if not asin_match:
+                asin_match = re.search(r'/gp/product/([A-Z0-9]{10})', parsed.path, re.IGNORECASE)
+
+            if asin_match:
+                asin = asin_match.group(1).upper()
+                clean_path = f'/dp/{asin}'
+                clean_query = ''
+                return urlunparse((parsed.scheme or 'https', parsed.netloc, clean_path, '', clean_query, ''))
+
+            return urlunparse((parsed.scheme or 'https', parsed.netloc, parsed.path, '', '', ''))
+        except Exception:
+            return url
 
     def resolve_mercadolivre_url(self, url):
         """Resolve links encurtados/social do Mercado Livre para URL canônica do produto"""
@@ -1469,7 +1512,16 @@ def scrape():
                 "site": scraper.identify_site(url),
                 "error_code": product_data.get("error_code")
             }
-            payload, status = error_response("SCRAPE_FAILED", product_data['error'], 502, details=details, request_id=request_id)
+            upstream_block_codes = {
+                "AMAZON_REQUESTS_BLOCKED",
+                "MERCADOLIVRE_REQUESTS_BLOCKED",
+                "AMAZON_CAPTCHA",
+                "MERCADOLIVRE_CAPTCHA",
+                "AMAZON_BLOCKED_OR_EMPTY",
+                "MERCADOLIVRE_BLOCKED_OR_EMPTY",
+            }
+            status = 429 if product_data.get("error_code") in upstream_block_codes else 502
+            payload, status = error_response("SCRAPE_FAILED", product_data['error'], status, details=details, request_id=request_id)
             log_event(
                 logging.ERROR,
                 "scrape_failed",
