@@ -47,10 +47,11 @@ def read_version_file(path="VERSION"):
         return None
 
 APP_VERSION = os.environ.get('APP_VERSION') or read_version_file() or '0.0.0'
-ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'true').lower() in ('1', 'true', 'yes')
-ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'true').lower() in ('1', 'true', 'yes')
+ALLOW_SELENIUM_IN_PROD = os.environ.get('ALLOW_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'false').lower() in ('1', 'true', 'yes')
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 MERCADOLIVRE_USE_SELENIUM_IN_PROD = os.environ.get('MERCADOLIVRE_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+USE_UNDETECTED_IN_PROD = os.environ.get('USE_UNDETECTED_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -187,7 +188,7 @@ class FreeIslandScraper:
             except Exception as e:
                 logger.warning(f"Undetected Chrome indisponível: {e}")
 
-            if uc is not None:
+            if uc is not None and USE_UNDETECTED_IN_PROD:
                 try:
                     # Tentar usar undetected-chromedriver primeiro
                     self.driver = uc.Chrome(options=options, version_main=None)
@@ -195,6 +196,8 @@ class FreeIslandScraper:
                 except Exception as e:
                     logger.warning(f"Undetected Chrome falhou: {e}")
                     self.driver = None
+            elif uc is not None:
+                logger.info("Undetected Chrome desabilitado por configuração (USE_UNDETECTED_IN_PROD=false)")
 
             if self.driver is None:
                 try:
@@ -1053,6 +1056,9 @@ window.chrome = window.chrome || { runtime: {} };
                 requests_data = self.scrape_amazon_requests(url)
                 if requests_data:
                     return requests_data
+                if self.last_error:
+                    return {'url': url, **self.last_error}
+                return {'error': 'Amazon bloqueou ou conteúdo indisponível', 'url': url, 'error_code': 'AMAZON_BLOCKED_OR_EMPTY'}
             # Primeiro tentar via requests (mais rápido e evita timeout do renderer)
             if not ALWAYS_USE_SELENIUM:
                 requests_data = self.scrape_amazon_requests(url)
