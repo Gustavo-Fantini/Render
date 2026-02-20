@@ -694,6 +694,24 @@ window.chrome = window.chrome || { runtime: {} };
                                 break
                 except Exception:
                     pass
+            if not price_text:
+                # Fallback extra: dados de variação no HTML (twister/cards)
+                regex_candidates = [
+                    r'"displayPrice"\s*:\s*"([^"]+)"',
+                    r'"priceToPay"\s*:\s*"([^"]+)"',
+                    r'"priceAmount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)',
+                    r'R\$\s?[0-9\.\,]{2,}',
+                ]
+                for pattern in regex_candidates:
+                    match = re.search(pattern, html, re.IGNORECASE)
+                    if not match:
+                        continue
+                    candidate = match.group(1).replace('&nbsp;', ' ').strip()
+                    if pattern.endswith('([0-9]+(?:\\.[0-9]{1,2})?)'):
+                        candidate = f"R$ {candidate}"
+                    if 'R$' in candidate or re.search(r'[0-9]', candidate):
+                        price_text = candidate
+                        break
 
             if price_text:
                 formatted, price_val = self.clean_price(price_text)
@@ -760,7 +778,13 @@ window.chrome = window.chrome || { runtime: {} };
             if asin_match:
                 asin = asin_match.group(1).upper()
                 clean_path = f'/dp/{asin}'
-                clean_query = ''
+                query = parse_qs(parsed.query)
+                kept = {}
+                # Preserva apenas parâmetros de variação relevantes para preço
+                for key in ('th', 'psc'):
+                    if key in query and query[key]:
+                        kept[key] = query[key]
+                clean_query = urlencode(kept, doseq=True)
                 return urlunparse((parsed.scheme or 'https', parsed.netloc, clean_path, '', clean_query, ''))
 
             return urlunparse((parsed.scheme or 'https', parsed.netloc, parsed.path, '', '', ''))
