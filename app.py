@@ -1048,7 +1048,7 @@ window.chrome = window.chrome || { runtime: {} };
                     if fraction_text:
                         price_text = f"{symbol_text} {fraction_text}"
                         if cents_text:
-                            price_text += f",{cents_text}"
+                            price_text += f",{cents_text.zfill(2)}"
                         formatted, price_val = self.clean_price(price_text, apply_amazon_fixes=False)
                         if formatted:
                             data_local['price'] = formatted
@@ -1058,6 +1058,20 @@ window.chrome = window.chrome || { runtime: {} };
                 return None
 
             social_data = extract_social_card(social_html, social_url)
+
+            # Para links de vitrine/perfil (ex: meli.la / affiliate-profile), o preço exibido no card
+            # é o que você quer capturar. Seguir para a página do produto pode trazer outro valor.
+            if social_data and social_data.get('price'):
+                log_event(
+                    logging.INFO,
+                    "mercadolivre_requests_using_social_price",
+                    has_title=bool(social_data.get('title')),
+                    has_price=True,
+                    has_image=bool(social_data.get('image_url')),
+                    social_url=social_url,
+                    final_url=response.url
+                )
+                return social_data
 
             # Se for página social com cards, tentar seguir para o produto
             if 'poly-card' in html and 'poly-component__title' in html:
