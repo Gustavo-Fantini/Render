@@ -7,6 +7,9 @@ import json
 from datetime import datetime
 import uuid
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from collections import deque
+import csv
+import io
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -52,6 +55,20 @@ ALWAYS_USE_SELENIUM = os.environ.get('ALWAYS_USE_SELENIUM', 'false').lower() in 
 AMAZON_USE_SELENIUM_IN_PROD = os.environ.get('AMAZON_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 MERCADOLIVRE_USE_SELENIUM_IN_PROD = os.environ.get('MERCADOLIVRE_USE_SELENIUM_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
 USE_UNDETECTED_IN_PROD = os.environ.get('USE_UNDETECTED_IN_PROD', 'false').lower() in ('1', 'true', 'yes')
+
+EVENT_BUFFER = deque(maxlen=250)
+METRICS = {
+    "scrape_ok": 0,
+    "scrape_fail": 0,
+    "save_ok": 0,
+    "save_fail": 0,
+    "data_ok": 0,
+    "data_fail": 0,
+}
+
+
+def new_request_id():
+    return str(uuid.uuid4())
 
 def get_env(name, default=None, required=False):
     value = os.environ.get(name, default)
@@ -107,7 +124,29 @@ def log_event(level, message, **fields):
     entry = {"message": message, "app_version": APP_VERSION}
     if fields:
         entry["fields"] = fields
+    try:
+        EVENT_BUFFER.append({
+            "ts": datetime.utcnow().isoformat() + "Z",
+            "level": int(level),
+            "message": message,
+            "app_version": APP_VERSION,
+            "fields": fields
+        })
+    except Exception:
+        pass
     logger.log(level, json.dumps(entry, ensure_ascii=False))
+
+
+def request_with_retries(method, url, *, retries=2, base_sleep=0.8, timeout=12, **kwargs):
+    last_exc = None
+    for attempt in range(retries + 1):
+        try:
+            if attempt > 0:
+                time.sleep(base_sleep * (2 ** (attempt - 1)))
+            return requests.request(method, url, timeout=timeout, **kwargs)
+        except Exception as e:
+            last_exc = e
+    raise last_exc
 
 def login_required(f):
     @functools.wraps(f)
@@ -608,7 +647,7 @@ window.chrome = window.chrome || { runtime: {} };
             start = time.time()
             resolved_url = self.resolve_amazon_url(url)
             request_url = self.canonicalize_amazon_url(resolved_url)
-            response = requests.get(request_url, headers=headers, timeout=12, allow_redirects=True)
+            response = request_with_retries('GET', request_url, headers=headers, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -630,7 +669,7 @@ window.chrome = window.chrome || { runtime: {} };
                 # Retry único em URL canônica sem parâmetros de tracking
                 canonical_retry = self.canonicalize_amazon_url(response.url or request_url)
                 if canonical_retry != request_url:
-                    retry_response = requests.get(canonical_retry, headers=headers, timeout=12, allow_redirects=True)
+                    retry_response = request_with_retries('GET', canonical_retry, headers=headers, timeout=12, allow_redirects=True)
                     retry_html = retry_response.text or ""
                     retry_lower = retry_html.lower()
                     log_event(
@@ -783,13 +822,13 @@ window.chrome = window.chrome || { runtime: {} };
             "Connection": "close"
         }
         try:
-            response = requests.head(url, headers=headers, timeout=8, allow_redirects=True)
+            response = request_with_retries('HEAD', url, headers=headers, timeout=8, allow_redirects=True)
             if response.url:
                 return response.url
         except Exception:
             pass
         try:
-            response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+            response = request_with_retries('GET', url, headers=headers, timeout=10, allow_redirects=True)
             if response.url:
                 return response.url
         except Exception:
@@ -842,20 +881,19 @@ window.chrome = window.chrome || { runtime: {} };
         session = requests.Session()
         session.headers.update(headers)
         try:
-            session.get("https://www.mercadolivre.com.br/", timeout=8)
+            request_with_retries('GET', "https://www.mercadolivre.com.br/", timeout=8, headers=session.headers)
         except Exception:
             pass
         try:
-            response = session.head(url, timeout=8, allow_redirects=True)
+            response = request_with_retries('HEAD', url, timeout=8, allow_redirects=True, headers=session.headers)
             if response.url:
                 resolved = response.url
         except Exception:
             pass
 
-        # Alguns encurtadores (ex: meli.la) não resolvem com HEAD. Fazer fallback via GET.
         try:
             if resolved == url:
-                response = session.get(url, timeout=10, allow_redirects=True, stream=True)
+                response = request_with_retries('GET', url, timeout=10, allow_redirects=True, stream=True, headers=session.headers)
                 if response.url:
                     resolved = response.url
         except Exception:
@@ -865,7 +903,7 @@ window.chrome = window.chrome || { runtime: {} };
         try:
             parsed = urlparse(resolved)
             if '/social/' in parsed.path or 'forceInApp' in parsed.query or 'matt_' in parsed.query:
-                response = session.get(resolved, timeout=10, allow_redirects=True)
+                response = request_with_retries('GET', resolved, timeout=10, allow_redirects=True, headers=session.headers)
                 soup = BeautifulSoup(response.text, 'html.parser')
                 canonical = soup.select_one('link[rel="canonical"]')
                 og_url = soup.select_one('meta[property="og:url"]')
@@ -893,7 +931,7 @@ window.chrome = window.chrome || { runtime: {} };
                         candidate = first.get('href')
                 if candidate:
                     try:
-                        prod = session.get(candidate, timeout=10, allow_redirects=True)
+                        prod = request_with_retries('GET', candidate, timeout=10, allow_redirects=True, headers=session.headers)
                         if prod.url:
                             return prod.url
                     except Exception:
@@ -942,7 +980,7 @@ window.chrome = window.chrome || { runtime: {} };
         try:
             start = time.time()
             resolved_url = self.resolve_mercadolivre_url(url)
-            response = requests.get(resolved_url, headers=headers, timeout=12, allow_redirects=True)
+            response = request_with_retries('GET', resolved_url, headers=headers, timeout=12, allow_redirects=True)
             elapsed_ms = int((time.time() - start) * 1000)
             log_event(
                 logging.INFO,
@@ -1059,8 +1097,6 @@ window.chrome = window.chrome || { runtime: {} };
 
             social_data = extract_social_card(social_html, social_url)
 
-            # Para links de vitrine/perfil (ex: meli.la / affiliate-profile), o preço exibido no card
-            # é o que você quer capturar. Seguir para a página do produto pode trazer outro valor.
             if social_data and social_data.get('price'):
                 log_event(
                     logging.INFO,
@@ -1082,7 +1118,7 @@ window.chrome = window.chrome || { runtime: {} };
                     candidate_url = title_el.get('href') if title_el else None
                     if candidate_url and candidate_url != response.url:
                         try:
-                            product_response = requests.get(candidate_url, headers=headers, timeout=12, allow_redirects=True)
+                            product_response = request_with_retries('GET', candidate_url, headers=headers, timeout=12, allow_redirects=True)
                             if product_response.status_code == 200:
                                 html = product_response.text
                                 lower_html = html.lower()
@@ -1593,7 +1629,7 @@ def dashboard():
 @login_required
 def scrape():
     try:
-        request_id = str(uuid.uuid4())
+        request_id = new_request_id()
         start = time.time()
         data = request.get_json()
         url = data.get('url')
@@ -1630,6 +1666,7 @@ def scrape():
                 error_code=product_data.get("error_code"),
                 details=details
             )
+            METRICS["scrape_fail"] = METRICS.get("scrape_fail", 0) + 1
             return jsonify(payload), status
         
         # Gerar mensagem
@@ -1658,6 +1695,7 @@ def scrape():
                 missing=missing_fields
             )
         log_event(logging.INFO, "scrape_success", request_id=request_id, url=url, elapsed_ms=elapsed_ms)
+        METRICS["scrape_ok"] = METRICS.get("scrape_ok", 0) + 1
         return jsonify({
             'product': product_data,
             'message': message,
@@ -1674,29 +1712,40 @@ def scrape():
 @login_required
 def save():
     try:
+        request_id = new_request_id()
         data = request.get_json()
         product_data = data.get('product')
         message = data.get('message')
         
         if not product_data or not message:
-            return jsonify({'error': 'Dados incompletos'}), 400
+            METRICS["save_fail"] = METRICS.get("save_fail", 0) + 1
+            payload, status = error_response("SAVE_INVALID", "Dados incompletos", 400, request_id=request_id)
+            return jsonify(payload), status
         
         # Salvar no Supabase
         success = scraper.save_to_supabase(product_data, message)
         
         if success:
-            return jsonify({'success': True, 'message': 'Produto salvo com sucesso!'})
+            METRICS["save_ok"] = METRICS.get("save_ok", 0) + 1
+            log_event(logging.INFO, "save_success", request_id=request_id)
+            return jsonify({'success': True, 'message': 'Produto salvo com sucesso!', 'request_id': request_id})
         else:
-            return jsonify({'error': 'Erro ao salvar produto'}), 500
+            METRICS["save_fail"] = METRICS.get("save_fail", 0) + 1
+            log_event(logging.ERROR, "save_failed", request_id=request_id)
+            payload, status = error_response("SAVE_FAILED", "Erro ao salvar produto", 502, request_id=request_id)
+            return jsonify(payload), status
             
     except Exception as e:
-        logger.error(f"Erro ao salvar: {e}")
-        return jsonify({'error': str(e)}), 500
+        METRICS["save_fail"] = METRICS.get("save_fail", 0) + 1
+        log_event(logging.ERROR, "save_exception", error=str(e), error_code="SAVE_EXCEPTION")
+        payload, status = error_response("SAVE_EXCEPTION", str(e), 500, request_id=locals().get("request_id"))
+        return jsonify(payload), status
 
 @app.route('/data', methods=['GET'])
 @login_required
 def data():
     try:
+        request_id = new_request_id()
         limit = request.args.get('limit', '20')
         try:
             limit = max(1, min(int(limit), 100))
@@ -1704,10 +1753,77 @@ def data():
             limit = 20
 
         rows = scraper.fetch_supabase_products(limit=limit)
-        return jsonify({'rows': rows, 'success': True})
+        METRICS["data_ok"] = METRICS.get("data_ok", 0) + 1
+        return jsonify({'rows': rows, 'success': True, 'request_id': request_id})
     except Exception as e:
-        logger.error(f"Erro ao listar dados: {e}")
-        return jsonify({'error': str(e), 'success': False}), 500
+        METRICS["data_fail"] = METRICS.get("data_fail", 0) + 1
+        log_event(logging.ERROR, "data_exception", error=str(e), error_code="DATA_EXCEPTION")
+        payload, status = error_response("DATA_EXCEPTION", str(e), 500, request_id=locals().get("request_id"))
+        return jsonify({**payload, 'success': False}), status
+
+
+@app.route('/diagnostics')
+@login_required
+def diagnostics():
+    try:
+        request_id = new_request_id()
+        payload = {
+            "success": True,
+            "request_id": request_id,
+            "app_version": APP_VERSION,
+            "is_production": IS_PRODUCTION,
+            "metrics": METRICS,
+            "last_error": scraper.last_error,
+            "events": list(EVENT_BUFFER)[-80:]
+        }
+        return jsonify(payload)
+    except Exception as e:
+        payload, status = error_response("DIAGNOSTICS_EXCEPTION", str(e), 500, request_id=locals().get("request_id"))
+        return jsonify(payload), status
+
+
+@app.route('/export.json')
+@login_required
+def export_json():
+    request_id = new_request_id()
+    limit = request.args.get('limit', '200')
+    try:
+        limit_int = max(1, min(int(limit), 1000))
+    except Exception:
+        limit_int = 200
+    rows = scraper.fetch_supabase_products(limit=limit_int)
+    return jsonify({
+        "success": True,
+        "request_id": request_id,
+        "rows": rows,
+        "count": len(rows)
+    })
+
+
+@app.route('/export.csv')
+@login_required
+def export_csv():
+    request_id = new_request_id()
+    limit = request.args.get('limit', '200')
+    try:
+        limit_int = max(1, min(int(limit), 1000))
+    except Exception:
+        limit_int = 200
+    rows = scraper.fetch_supabase_products(limit=limit_int)
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["mensagem", "imagem_url", "enviado", "criado_em"], extrasaction='ignore')
+    writer.writeheader()
+    for r in rows or []:
+        writer.writerow(r)
+    csv_text = output.getvalue()
+    resp = app.response_class(
+        response=csv_text,
+        status=200,
+        mimetype='text/csv'
+    )
+    resp.headers['Content-Disposition'] = f'attachment; filename="freeisland_export_{APP_VERSION}.csv"'
+    resp.headers['X-Request-Id'] = request_id
+    return resp
 
 @app.route('/logout')
 def logout():

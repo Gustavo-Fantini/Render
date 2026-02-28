@@ -2,4 +2,4 @@
 
 ## Versão
 
-Versão atual: **4.0.25**
+Versão atual: **5.0.0**

@@ -265,6 +265,118 @@
             gap: 12px;
         }
 
+        .actions-secondary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-sm {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .template-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+
+        select {
+            width: 100%;
+            background: var(--bg-elev);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: rgba(124, 240, 200, 0.5);
+            box-shadow: 0 0 0 3px rgba(124, 240, 200, 0.15);
+        }
+
+        .preview {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .wa-bubble {
+            background: rgba(124, 240, 200, 0.08);
+            border: 1px solid rgba(124, 240, 200, 0.22);
+            border-radius: 16px;
+            padding: 12px 12px;
+            line-height: 1.35;
+            white-space: pre-wrap;
+        }
+
+        .wa-bubble strong {
+            font-weight: 700;
+        }
+
+        .history {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .history-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .history-meta {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .history-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .link-inline {
+            color: var(--accent-2);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link-inline:hover {
+            text-decoration: underline;
+        }
+
         .loading {
             display: none;
             text-align: center;
@@ -475,7 +587,6 @@
                 height: 56px;
             }
         }
-        }
 
         @media (max-width: 480px) {
             .logo {
@@ -556,15 +667,36 @@
 
                     <div class="product-preview" id="productPreview"></div>
 
+                    <div class="template-row">
+                        <div class="form-group">
+                            <label for="messageTemplate">Template</label>
+                            <select id="messageTemplate" name="message_template"></select>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="regenBtn" type="button">Regerar</button>
+                    </div>
+
                     <div class="form-group">
                         <label for="message">Mensagem Gerada</label>
                         <textarea id="message" name="message"></textarea>
+                    </div>
+
+                    <div class="preview">
+                        <div class="preview-header">
+                            <span>Preview (WhatsApp)</span>
+                            <a class="link-inline" href="#" id="copyMsgBtn">Copiar</a>
+                        </div>
+                        <div class="wa-bubble" id="waPreview"></div>
                     </div>
 
                     <div class="actions">
                         <button class="btn btn-ghost" id="editBtn">Editar</button>
                         <button class="btn btn-success" id="saveBtn">Salvar no Supabase</button>
                         <button class="btn btn-ghost" id="resetBtn">Nova Busca</button>
+                    </div>
+
+                    <div class="actions-secondary">
+                        <button class="btn btn-ghost btn-sm" id="openProductBtn" type="button">Abrir produto</button>
+                        <button class="btn btn-ghost btn-sm" id="copyUrlBtn" type="button">Copiar link</button>
                     </div>
                 </div>
             </section>
@@ -573,6 +705,11 @@
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                     <h2 class="panel-title">📡 Base ao Vivo</h2>
                     <button class="btn btn-ghost" id="refreshBtn">Atualizar</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 12px;">
+                    <a class="link-inline" href="/export.csv" target="_blank" rel="noreferrer">Exportar CSV</a>
+                    <a class="link-inline" href="/export.json" target="_blank" rel="noreferrer">Exportar JSON</a>
+                    <a class="link-inline" href="/diagnostics" target="_blank" rel="noreferrer">Diagnostics</a>
                 </div>
                 <div id="liveStatus" style="color: var(--muted); font-size: 0.85rem; margin-bottom: 12px;"></div>
                 <div style="overflow-x: auto;">
@@ -590,6 +727,12 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div style="margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <h2 class="panel-title" style="margin: 0;">🧾 Histórico da sessão</h2>
+                    <button class="btn btn-ghost btn-sm" id="clearHistoryBtn" type="button">Limpar</button>
+                </div>
+                <div class="history" id="history"></div>
             </section>
         </div>
     </main>
@@ -602,6 +745,209 @@
         let currentProduct = null;
         let currentMessage = '';
         let liveTimer = null;
+        let sessionHistory = [];
+
+        const templates = {
+            padrao: {
+                label: 'Padrão',
+                build: ({ title, price, url, freeShipping, couponName, couponDiscount, linktree }) => {
+                    const fire = '🔥';
+                    const shopping = '🛍️';
+                    const diamond = '💎';
+                    const truck = '🚚';
+                    const brazil = '🇧🇷';
+                    const ticket = '🎟️';
+                    const clock = '⏰';
+                    const finger = '👇';
+                    const island = '🏝️';
+                    const link = '🔗';
+                    const sparkles = '✨';
+                    let msg = `${fire}${fire} *SUPER OFERTA EXCLUSIVA!* ${fire}${fire}\n\n`;
+                    msg += `${shopping} *PRODUTO:* ${title}\n\n`;
+                    msg += `${diamond} *PREÇO ESPECIAL:* ${price}\n`;
+                    if (freeShipping) {
+                        msg += `${truck} *FRETE GRÁTIS* para todo Brasil! ${brazil}\n`;
+                    }
+                    if (couponName && couponDiscount) {
+                        msg += `${ticket} *CUPOM EXTRA:* ${couponName} - ${couponDiscount}% DE DESCONTO!\n`;
+                    }
+                    msg += `\n${clock} *CORRA! OFERTA POR TEMPO LIMITADO!* ${clock}\n\n`;
+                    msg += `${finger} *GARANTA JÁ O SEU:* ${finger}\n`;
+                    msg += `${url}\n\n`;
+                    msg += `${island} *Free Island - As melhores ofertas da internet!* ${island}\n`;
+                    msg += `${link} *Mais promoções:* ${linktree}\n\n`;
+                    msg += `${sparkles} *Aproveite! Compre agora e economize muito!* ${sparkles}`;
+                    return msg;
+                }
+            },
+            curta: {
+                label: 'Curta',
+                build: ({ title, price, url, freeShipping, couponName, couponDiscount }) => {
+                    const fire = '🔥';
+                    const truck = '🚚';
+                    const ticket = '🎟️';
+                    let msg = `${fire} *OFERTA!* ${title}\n`;
+                    msg += `💎 *${price}*\n`;
+                    if (freeShipping) msg += `${truck} Frete grátis\n`;
+                    if (couponName && couponDiscount) msg += `${ticket} Cupom: ${couponName} (-${couponDiscount}%)\n`;
+                    msg += `🔗 ${url}`;
+                    return msg;
+                }
+            },
+            detalhada: {
+                label: 'Detalhada',
+                build: ({ title, price, url, freeShipping, couponName, couponDiscount, linktree }) => {
+                    const check = '✅';
+                    let msg = `🔥🔥 *SUPER OFERTA!* 🔥🔥\n\n`;
+                    msg += `🛍️ *Produto:* ${title}\n`;
+                    msg += `💰 *Preço:* ${price}\n`;
+                    if (freeShipping) msg += `🚚 *Frete:* Grátis\n`;
+                    if (couponName && couponDiscount) msg += `🎟️ *Cupom:* ${couponName} (-${couponDiscount}%)\n`;
+                    msg += `\n${check} *Link:* ${url}\n\n`;
+                    msg += `🔗 *Mais promoções:* ${linktree}`;
+                    return msg;
+                }
+            }
+        };
+
+        function getSelectedTemplateKey() {
+            const el = document.getElementById('messageTemplate');
+            return el && el.value ? el.value : 'padrao';
+        }
+
+        function getFormState() {
+            const url = (currentProduct && (currentProduct.original_url || currentProduct.url)) || document.getElementById('url').value;
+            const freeShipping = document.getElementById('freeShipping').checked;
+            const hasCoupon = document.getElementById('hasCoupon').checked;
+            const couponName = hasCoupon ? document.getElementById('couponName').value : null;
+            const couponDiscount = hasCoupon ? document.getElementById('couponDiscount').value : null;
+            return { url, freeShipping, couponName, couponDiscount };
+        }
+
+        function rebuildMessageFromTemplate() {
+            if (!currentProduct) return;
+            const tplKey = getSelectedTemplateKey();
+            const tpl = templates[tplKey] || templates.padrao;
+            const { freeShipping, couponName, couponDiscount } = getFormState();
+            const url = currentProduct.original_url || currentProduct.url || '';
+            const title = currentProduct.title || 'Produto';
+            const price = currentProduct.price || 'Preço não encontrado';
+            const msg = tpl.build({
+                title,
+                price,
+                url,
+                freeShipping,
+                couponName,
+                couponDiscount,
+                linktree: 'https://linktr.ee/Free_Island'
+            });
+            currentMessage = msg;
+            document.getElementById('message').value = msg;
+            updatePreview();
+        }
+
+        function renderWhatsApp(text) {
+            const safe = String(text || '');
+            const escaped = safe
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            return escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        }
+
+        function updatePreview() {
+            const el = document.getElementById('waPreview');
+            const text = document.getElementById('message').value || '';
+            el.innerHTML = renderWhatsApp(text);
+        }
+
+        function loadHistory() {
+            try {
+                const raw = localStorage.getItem('fi_session_history');
+                sessionHistory = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(sessionHistory)) sessionHistory = [];
+            } catch {
+                sessionHistory = [];
+            }
+        }
+
+        function saveHistory() {
+            try {
+                localStorage.setItem('fi_session_history', JSON.stringify(sessionHistory.slice(0, 25)));
+            } catch {
+            }
+        }
+
+        function addToHistory(product, message) {
+            const item = {
+                ts: Date.now(),
+                title: product && product.title ? product.title : 'Produto',
+                price: product && product.price ? product.price : '',
+                url: (product && (product.original_url || product.url)) || '',
+                image_url: product && product.image_url ? product.image_url : '',
+                message: message || ''
+            };
+            sessionHistory.unshift(item);
+            sessionHistory = sessionHistory.slice(0, 25);
+            saveHistory();
+            renderHistory();
+        }
+
+        function formatTs(ts) {
+            try {
+                return new Date(ts).toLocaleString('pt-BR');
+            } catch {
+                return '';
+            }
+        }
+
+        function renderHistory() {
+            const root = document.getElementById('history');
+            if (!root) return;
+            if (!sessionHistory.length) {
+                root.innerHTML = '<div style="color: var(--muted);">Sem itens na sessão</div>';
+                return;
+            }
+            root.innerHTML = sessionHistory.map((item, idx) => {
+                const title = (item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const price = (item.price || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const url = item.url || '';
+                return `
+                    <div class="history-item" data-idx="${idx}">
+                        <div class="history-title">${title}</div>
+                        <div class="history-meta">
+                            <span>${price || '-'}</span>
+                            <span>${formatTs(item.ts)}</span>
+                        </div>
+                        <div class="history-actions">
+                            <button class="btn btn-ghost btn-sm" data-action="restore">Restaurar</button>
+                            <button class="btn btn-ghost btn-sm" data-action="copy">Copiar msg</button>
+                            <button class="btn btn-ghost btn-sm" data-action="open">Abrir</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function copyText(text) {
+            const value = String(text || '');
+            try {
+                await navigator.clipboard.writeText(value);
+                return true;
+            } catch {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = value;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+        }
 
         document.getElementById('hasCoupon').addEventListener('change', function() {
             const couponSection = document.getElementById('couponSection');
@@ -643,6 +989,8 @@
                     currentMessage = data.message;
                     showProductPreview(data.product);
                     document.getElementById('message').value = data.message;
+                    updatePreview();
+                    addToHistory(data.product, data.message);
                     document.getElementById('resultSection').classList.add('active');
                     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
                 } else {
@@ -661,6 +1009,40 @@
             messageTextarea.focus();
             messageTextarea.select();
             showAlert('Edite a mensagem no campo acima e depois clique em "Salvar no Supabase"', 'success');
+        });
+
+        document.getElementById('message').addEventListener('input', function() {
+            currentMessage = this.value;
+            updatePreview();
+        });
+
+        document.getElementById('regenBtn').addEventListener('click', function() {
+            rebuildMessageFromTemplate();
+        });
+
+        document.getElementById('copyMsgBtn').addEventListener('click', async function(e) {
+            e.preventDefault();
+            const ok = await copyText(document.getElementById('message').value || '');
+            showAlert(ok ? 'Mensagem copiada!' : 'Falha ao copiar', ok ? 'success' : 'error');
+        });
+
+        document.getElementById('openProductBtn').addEventListener('click', function() {
+            const url = currentProduct && (currentProduct.original_url || currentProduct.url);
+            if (!url) {
+                showAlert('Link não disponível', 'error');
+                return;
+            }
+            window.open(url, '_blank', 'noopener');
+        });
+
+        document.getElementById('copyUrlBtn').addEventListener('click', async function() {
+            const url = currentProduct && (currentProduct.original_url || currentProduct.url);
+            if (!url) {
+                showAlert('Link não disponível', 'error');
+                return;
+            }
+            const ok = await copyText(url);
+            showAlert(ok ? 'Link copiado!' : 'Falha ao copiar', ok ? 'success' : 'error');
         });
 
         document.getElementById('saveBtn').addEventListener('click', async function() {
@@ -741,10 +1123,56 @@
             document.getElementById('couponSection').classList.remove('active');
             currentProduct = null;
             currentMessage = '';
+            document.getElementById('waPreview').textContent = '';
 
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => alert.remove());
         }
+
+        document.getElementById('history').addEventListener('click', async function(e) {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const wrapper = e.target.closest('.history-item');
+            const idx = wrapper ? Number(wrapper.getAttribute('data-idx')) : NaN;
+            if (!Number.isFinite(idx) || idx < 0 || idx >= sessionHistory.length) return;
+            const item = sessionHistory[idx];
+            const action = btn.getAttribute('data-action');
+            if (action === 'restore') {
+                document.getElementById('url').value = item.url || '';
+                currentProduct = {
+                    title: item.title,
+                    price: item.price,
+                    original_url: item.url,
+                    url: item.url,
+                    image_url: item.image_url
+                };
+                showProductPreview(currentProduct);
+                document.getElementById('message').value = item.message || '';
+                currentMessage = item.message || '';
+                updatePreview();
+                document.getElementById('resultSection').classList.add('active');
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+                showAlert('Item restaurado', 'success');
+            }
+            if (action === 'copy') {
+                const ok = await copyText(item.message || '');
+                showAlert(ok ? 'Mensagem copiada!' : 'Falha ao copiar', ok ? 'success' : 'error');
+            }
+            if (action === 'open') {
+                if (!item.url) {
+                    showAlert('Link não disponível', 'error');
+                    return;
+                }
+                window.open(item.url, '_blank', 'noopener');
+            }
+        });
+
+        document.getElementById('clearHistoryBtn').addEventListener('click', function() {
+            sessionHistory = [];
+            saveHistory();
+            renderHistory();
+            showAlert('Histórico limpo', 'success');
+        });
 
         function formatDate(value) {
             if (!value) return '-';
@@ -761,7 +1189,6 @@
             try {
                 msg = JSON.parse(msg);
             } catch {
-                // ignore
             }
             msg = String(msg).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
             return msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
@@ -802,6 +1229,20 @@
                 status.textContent = 'Erro ao carregar base ao vivo';
             }
         }
+
+        (function initTemplates() {
+            const select = document.getElementById('messageTemplate');
+            select.innerHTML = Object.entries(templates)
+                .map(([key, tpl]) => `<option value="${key}">${tpl.label}</option>`)
+                .join('');
+            select.value = 'padrao';
+            select.addEventListener('change', function() {
+                rebuildMessageFromTemplate();
+            });
+        })();
+
+        loadHistory();
+        renderHistory();
 
         loadLiveData();
         liveTimer = setInterval(loadLiveData, 15000);
