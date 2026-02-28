@@ -488,6 +488,39 @@ window.chrome = window.chrome || { runtime: {} };
                 continue
         return None, None
 
+    def extract_ml_money_amount_text(self, money_amount_element):
+        """Monta o preço a partir do container andes-money-amount (evita '15990' sem separador)."""
+        try:
+            symbol_el = None
+            fraction_el = None
+            cents_el = None
+            try:
+                symbol_el = money_amount_element.find_element(By.CSS_SELECTOR, '.andes-money-amount__currency-symbol')
+            except Exception:
+                symbol_el = None
+            try:
+                fraction_el = money_amount_element.find_element(By.CSS_SELECTOR, '.andes-money-amount__fraction')
+            except Exception:
+                fraction_el = None
+            try:
+                cents_el = money_amount_element.find_element(By.CSS_SELECTOR, '.andes-money-amount__cents')
+            except Exception:
+                cents_el = None
+
+            symbol_text = symbol_el.text.strip() if symbol_el and symbol_el.text else 'R$'
+            fraction_text = fraction_el.text.strip() if fraction_el and fraction_el.text else ''
+            cents_text = cents_el.text.strip() if cents_el and cents_el.text else ''
+
+            if not fraction_text or not any(c.isdigit() for c in fraction_text):
+                return None
+
+            price_text = f"{symbol_text} {fraction_text}"
+            if cents_text and any(c.isdigit() for c in cents_text):
+                price_text += f",{cents_text.zfill(2)}"
+            return price_text
+        except Exception:
+            return None
+
     def extract_image_from_selectors(self, selectors):
         for selector in selectors:
             try:
@@ -1325,12 +1358,32 @@ window.chrome = window.chrome || { runtime: {} };
                 logger.info(f"Título encontrado: {title}")
             
             # Preço
-            price_selectors = [
-                '.poly-price__current .andes-money-amount--cents-superscript .andes-money-amount__fraction',
-                '.poly-price__current .andes-money-amount__fraction',
-                '.ui-pdp-price__current .andes-money-amount__fraction'
-            ]
-            formatted, price_val = self.extract_price_from_selectors(price_selectors)
+            formatted = None
+            price_val = None
+            try:
+                money_amount = None
+                money_candidates = [
+                    '.poly-price__current .andes-money-amount',
+                    '.ui-pdp-price__current .andes-money-amount',
+                ]
+                for sel in money_candidates:
+                    els = self.driver.find_elements(By.CSS_SELECTOR, sel)
+                    if els:
+                        money_amount = els[0]
+                        break
+                if money_amount is not None:
+                    ml_price_text = self.extract_ml_money_amount_text(money_amount)
+                    if ml_price_text:
+                        formatted, price_val = self.clean_price(ml_price_text, apply_amazon_fixes=False)
+            except Exception:
+                pass
+
+            if not formatted:
+                price_selectors = [
+                    '.poly-price__current .andes-money-amount__fraction',
+                    '.ui-pdp-price__current .andes-money-amount__fraction'
+                ]
+                formatted, price_val = self.extract_price_from_selectors(price_selectors, apply_amazon_fixes=False)
             if formatted:
                 data['price'] = formatted
                 data['price_value'] = price_val
