@@ -314,7 +314,7 @@ window.chrome = window.chrome || { runtime: {} };
         logger.info(f"URL completa: {full_url}")
         
         # Verificar no domínio e na URL completa
-        if any(d in domain for d in ['mercadolivre.com', 'mercadolivre.com.br', 'ml.com.br', 'ml.com']):
+        if any(d in domain for d in ['mercadolivre.com', 'mercadolivre.com.br', 'ml.com.br', 'ml.com', 'meli.la']):
             return 'mercadolivre'
         elif any(d in domain for d in ['amazon.com.br', 'amzn.to']):
             return 'amazon'
@@ -816,6 +816,15 @@ window.chrome = window.chrome || { runtime: {} };
             response = session.head(url, timeout=8, allow_redirects=True)
             if response.url:
                 resolved = response.url
+        except Exception:
+            pass
+
+        # Alguns encurtadores (ex: meli.la) não resolvem com HEAD. Fazer fallback via GET.
+        try:
+            if resolved == url:
+                response = session.get(url, timeout=10, allow_redirects=True, stream=True)
+                if response.url:
+                    resolved = response.url
         except Exception:
             pass
 
